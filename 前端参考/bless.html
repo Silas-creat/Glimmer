@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>祝福</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+  #bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    background-image: url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1600');
+  }
+  #bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(0,0,0,0.32);
+  }
+
+  .back {
+    position: absolute; top: 20px; left: 20px; z-index: 5;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.28); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; cursor: pointer;
+  }
+  .back:active { transform: scale(.94); }
+
+  .title {
+    position: absolute; top: 90px; left: 0; right: 0; z-index: 3;
+    text-align: center; color: #fff;
+    font-size: 20px; letter-spacing: 2px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    padding: 0 30px;
+  }
+
+  #text {
+    position: absolute; z-index: 3;
+    left: 30px; right: 30px; top: 170px; bottom: 140px;
+    background: transparent; border: none; outline: none; resize: none;
+    color: #fff; font-size: 17px; line-height: 2;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    font-family: inherit;
+  }
+  #text::placeholder { color: rgba(255,255,255,0.65); }
+
+  #sendBtn {
+    position: absolute; z-index: 3;
+    left: 50%; bottom: 44px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.9); color: #4a4a42;
+    border: none; border-radius: 24px;
+    padding: 13px 30px; font-size: 15px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  #sendBtn:active { transform: translateX(-50%) scale(.96); }
+  #sendBtn .plane { font-size: 17px; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<div id="bg"></div>
+<div class="back" onclick="safeBack('mine.html')">‹</div>
+<div class="title" id="title">给 ta 的祝福</div>
+
+<textarea id="text" placeholder="写一句祝福吧…"></textarea>
+
+<button id="sendBtn" onclick="send()">
+  <span class="plane">✈</span> 发送
+</button>
+
+<script src="api.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const to = params.get('to') || 'ta';
+document.getElementById('title').textContent = '给 ' + to + ' 的祝福';
+
+const toId = params.get('uid');
+
+async function send() {
+  const text = document.getElementById('text').value.trim();
+  if (!text) { alert('写点什么再发吧'); return; }
+  if (!toId) { alert('找不到这个人的账号，请从她的主页进入'); return; }
+
+  const res = await api('/bless', { method: 'POST', body: { toId: Number(toId), content: text } });
+  if (res.code !== 0) { alert(res.msg || '发送失败，请重试'); return; }
+
+  // 弹一个自定义提示，不跳转
+  const mask = document.createElement('div');
+  mask.style.cssText = `
+    position: fixed; inset: 0; z-index: 99;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+  `;
+  const box = document.createElement('div');
+  box.style.cssText = `
+    background: #fff; border-radius: 16px;
+    padding: 28px 32px; text-align: center;
+    max-width: 260px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  `;
+  box.innerHTML = `
+    <div style="font-size:16px;color:#4a4a42;line-height:1.8;">ta已收到你的祝福，谢谢你</div>
+    <button style="margin-top:20px;border:none;border-radius:10px;padding:10px 32px;font-size:15px;background:#a8b89c;color:#fff;cursor:pointer;">好</button>
+  `;
+  mask.appendChild(box);
+  document.body.appendChild(mask);
+
+  box.querySelector('button').onclick = () => {
+    mask.remove();
+    document.getElementById('text').value = '';
+  };
+}
+</script>
+<script>
+function safeBack(fallback) {
+  try {
+    // 从本站别的页面进来的，才有"上一页"可回
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  // 直接打开 / 刷新：兜底回指定页面
+  location.replace(fallback || 'index.html');
+}
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+</body>
+</html>

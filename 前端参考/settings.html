@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设置</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f7f5f1; color: #3a3a34; min-height: 100vh;
+  }
+  header {
+    display: flex; align-items: center;
+    padding: 18px 20px 12px;
+  }
+  header .back { font-size: 22px; color: #7d9b6a; cursor: pointer; padding: 0 10px; }
+  header .tt { font-size: 17px; color: #4a4a42; }
+
+  .list { background: #fff; margin: 10px 16px; border-radius: 14px; overflow: hidden; }
+  .row {
+    display: flex; align-items: center;
+    padding: 15px 18px; border-bottom: 1px solid #f2efe9;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .lbl { flex: 1; font-size: 15px; color: #4a4a42; }
+  .row .val { font-size: 13px; color: #b0aa9c; margin-right: 8px; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .arrow { font-size: 18px; color: #cfc9bd; }
+  .row .ic { font-size: 17px; width: 26px; }
+  .row.click { cursor: pointer; }
+  .row.click:active { background: #f8f6f2; }
+  .row.danger .lbl { color: #c07362; }
+
+  /* 弹层 */
+  #modal {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.35);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  #modal.open { display: flex; }
+  .box {
+    background: #fff; border-radius: 16px;
+    width: 100%; max-width: 340px; padding: 22px;
+  }
+  .box h3 { font-size: 16px; color: #4a4a42; margin-bottom: 16px; font-weight: normal; }
+  .box input, .box textarea {
+    width: 100%; border: 1px solid #e6e2da; border-radius: 10px;
+    padding: 11px 14px; font-size: 15px; color: #3a3a34;
+    outline: none; font-family: inherit;
+  }
+  .box textarea { resize: none; height: 80px; }
+  .box .btns { display: flex; gap: 10px; margin-top: 18px; }
+  .box button {
+    flex: 1; border: none; border-radius: 10px;
+    padding: 11px 0; font-size: 15px; cursor: pointer;
+  }
+  .box .cancel { background: #f2efe9; color: #8a8578; }
+  .box .ok { background: #a8b89c; color: #fff; }
+
+  .avatar-preview {
+    width: 70px; height: 70px; border-radius: 50%;
+    background: #d8e4d0; margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: #7d9b6a; overflow: hidden;
+  }
+  /* 首字垫底 + 图片覆盖：图挂了就露出首字，不会出现破图标 */
+  .avatar-preview { position: relative; }
+  .avatar-preview .av-txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .avatar-preview img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<header>
+  <div class="back" onclick="safeBack('mine.html')">‹</div>
+  <div class="tt">设置</div>
+</header>
+
+<div class="list">
+  <div class="row click" onclick="editAvatar()">
+    <div class="ic">☺</div>
+    <div class="lbl">头像</div>
+    <div class="val" id="vAvatar"></div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click" onclick="editText(&quot;nickname&quot;,&quot;昵称&quot;)">
+    <div class="ic">✎</div>
+    <div class="lbl">昵称</div>
+    <div class="val" id="vNick"></div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click" >
+    <div class="ic">#</div>
+    <div class="lbl">ID</div>
+    <div class="val" id="vId"></div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click" onclick="editText('signature','个性签名')">
+    <div class="ic">✎</div>
+    <div class="lbl">个性签名</div>
+    <div class="val" id="vSign"></div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click" onclick="editText('addr','地址')">
+    <div class="ic">⌖</div>
+    <div class="lbl">地址</div>
+    <div class="val" id="vAddr"></div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="row click" onclick="editBirth()">
+    <div class="ic">🎂</div>
+    <div class="lbl">年龄</div>
+    <div class="val" id="vBirth"></div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click" onclick="editZodiac()">
+    <div class="ic">★</div>
+    <div class="lbl">星座</div>
+    <div class="val" id="vZodiac"></div>
+    <div class="arrow">›</div>
+  </div>
+
+
+  <div class="row click" onclick="editProvince()">
+    <div class="ic">⌖</div>
+    <div class="lbl">省份</div>
+    <div class="val" id="vProv"></div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="row click" onclick="showQr()">
+    <div class="ic">▣</div>
+    <div class="lbl">二维码</div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click" onclick="location.href='report-mine.html'">
+    <div class="ic">⚑</div>
+    <div class="lbl">举报记录</div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click" onclick="showStyle()">
+    <div class="ic">◐</div>
+    <div class="lbl">风格</div>
+    <div class="arrow">›</div>
+  </div>
+</div>
+
+<!-- 账号操作 -->
+<div class="list">
+  <div class="row click" onclick="switchAccount()">
+    <div class="ic">⇄</div>
+    <div class="lbl">切换账号</div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="row click danger" onclick="logout()">
+    <div class="ic">⏻</div>
+    <div class="lbl">退出登录</div>
+    <div class="arrow">›</div>
+  </div>
+</div>
+
+<!-- 通用编辑弹层 -->
+<div id="modal">
+  <div class="box" id="box"></div>
+</div>
+
+<script src="api.js"></script>
+<script>
+// ===== 设置页：接后端 /api/user =====
+//
+//  ★ 改了什么 ★
+//    原稿把昵称/签名/头像全存在 localStorage 的 user_profile 里，
+//    改完刷新就没了，别人也永远看不到。
+//    现在：读 /api/user/me，改走 PATCH /api/user/me，头像走 /api/user/avatar-base64。
+//
+//  ★ 为什么头像要先缩图 ★
+//    手机拍的照片动辄几 MB，直接传又慢又容易被拦。
+//    先用 canvas 缩到 256px 再传，一般只剩几十 KB。
+
+let me = null;
+
+function esc(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function toast(msg) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99;'
+    + 'background:rgba(50,50,50,.9);color:#fff;font-size:14px;padding:11px 20px;border-radius:10px;';
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 1500);
+}
+
+function refresh() {
+  if (!me) return;
+  document.getElementById('vAvatar').textContent = me.avatar ? '已设置' : '';
+  var n = document.getElementById('vNick');
+  if (n) n.textContent = me.nickname || '';
+  document.getElementById('vId').textContent = me.uid || '';
+  document.getElementById('vSign').textContent = me.signature || '';
+  document.getElementById('vAddr').textContent = me.addr || '';
+
+  // 群聊标签：年龄 / 星座
+  var vb = document.getElementById('vBirth');
+  if (vb) vb.textContent = me.birthYear ? ((me.age || (new Date().getFullYear() - me.birthYear)) + ' 岁') : '未填写';
+  var vp = document.getElementById('vProv');
+  if (vp) vp.textContent = me.province ? me.province : '未填写';
+  var vz = document.getElementById('vZodiac');
+  if (vz) vz.textContent = me.zodiac ? (me.zodiac + '座') : '未填写';
+}
+
+async function loadMe() {
+  var r = await api('/user/me');
+  if (r.code === 0 && r.data && r.data.user) {
+    me = r.data.user;
+    refresh();
+  } else if (r.code !== 401) {
+    toast(r.msg || '资料加载失败');
+  }
+}
+
+// 通用文本编辑（昵称 / 个性签名 / 地址）
+function editText(field, label) {
+  if (!me) { toast('资料还没加载好'); return; }
+  var cur = me[field] || '';
+  var box = document.getElementById('box');
+
+  box.innerHTML = '<h3>' + esc(label) + '</h3>'
+    + (field === 'signature'
+        ? '<textarea id="editInput" maxlength="255">' + esc(cur) + '</textarea>'
+        : '<input id="editInput" maxlength="32" value="' + esc(cur) + '" />')
+    + '<div class="btns">'
+    + '<button class="cancel" onclick="closeModal()">取消</button>'
+    + '<button class="ok" onclick="saveText(&quot;' + field + '&quot;)">保存</button>'
+    + '</div>';
+
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('editInput').focus();
+}
+
+async function saveText(field) {
+  var val = document.getElementById('editInput').value.trim();
+  if (field === 'nickname' && !val) { toast('昵称不能为空'); return; }
+
+  var body = {};
+  body[field] = val;
+
+  var r = await api('/user/me', { method: 'PATCH', body: body });
+  if (r.code !== 0) { toast(r.msg || '保存失败'); return; }
+
+  if (r.data && r.data.user) { me = r.data.user; setUser(me); }
+  else me[field] = val;
+
+  closeModal();
+  refresh();
+  toast('已保存');
+}
+
+// 头像：选图 → 缩到 256 → 传 base64
+function editAvatar() {
+  if (!me) { toast('资料还没加载好'); return; }
+  var box = document.getElementById('box');
+
+  // 首字垫底（绝对定位），有图再盖上去；图加载失败就 remove，露出首字
+  var _f = (Array.from(me.nickname || '☺')[0] || '☺');
+  var _safe = esc(_f);
+
+  box.innerHTML = '<h3>头像</h3>'
+    + '<div class="avatar-preview" id="avPrev"><span class="av-txt">' + _safe + '</span></div>'
+    + '<input type="file" id="fileInput" accept="image/*" />'
+    + '<div class="btns">'
+    + '<button class="cancel" onclick="closeModal()">取消</button>'
+    + '<button class="ok" onclick="saveAvatar()">保存</button>'
+    + '</div>';
+
+  // 有头像就把图叠上去（上面已经放了首字，失败也不会出破图标）
+  if (me.avatar) {
+    var _im = new Image();
+    _im.alt = '';
+    _im.onerror = function () { _im.remove(); };
+    _im.src = me.avatar;
+    var _prev = document.getElementById('avPrev');
+    if (_prev) _prev.appendChild(_im);
+  }
+
+  document.getElementById('modal').classList.add('open');
+
+  document.getElementById('fileInput').addEventListener('change', function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+
+    var img = new Image();
+    var url = URL.createObjectURL(f);
+
+    img.onload = function () {
+      var max = 256;
+      var scale = Math.min(1, max / Math.max(img.width, img.height));
+      var w = Math.max(1, Math.round(img.width * scale));
+      var h = Math.max(1, Math.round(img.height * scale));
+
+      var c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+
+      URL.revokeObjectURL(url);
+      var dataUrl = c.toDataURL('image/jpeg', 0.85);
+
+      document.getElementById('avPrev').innerHTML = '<img src="' + dataUrl + '">';
+      box.dataset.temp = dataUrl;
+    };
+
+    img.src = url;
+  });
+}
+
+async function saveAvatar() {
+  var box = document.getElementById('box');
+  var temp = box.dataset.temp;
+  if (!temp) { toast('先选一张图'); return; }
+
+  var r = await api('/user/avatar-base64', { method: 'POST', body: { image: temp } });
+  if (r.code !== 0) { toast(r.msg || '上传失败'); return; }
+
+  if (r.data && r.data.user) me = r.data.user;
+  closeModal();
+  refresh();
+  toast('头像已更新');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+// ===== 退出登录 =====
+function goLogin() {
+  try { sessionStorage.removeItem('peizhe_logged_in'); } catch (e) {}
+  try { localStorage.removeItem('peizhe_logged_in'); } catch (e) {}
+  try {
+    localStorage.removeItem('wg_token');
+    localStorage.removeItem('wg_user');
+    localStorage.removeItem('user_profile');
+  } catch (e) {}
+  location.replace('login.html');
+}
+
+function switchAccount() { goLogin(); }
+function logout() { goLogin(); }
+
+loadMe();
+
+// ===== 二维码 / 风格 =====
+//   没有引入二维码库，这里给的是"可以复制的主页标识"，
+//   比弹一句"待做"有用。
+function showQr() {
+  var uid = (me && me.uid) || '';
+  var box = document.getElementById('box');
+  box.innerHTML = '<h3>我的主页</h3>'
+    + '<div id="qrBox" style="text-align:center;padding:8px 0 4px;"></div>'
+    + '<div style="text-align:center;padding:10px 0 4px;">'
+    + '<div style="font-size:12px;color:#a8a294;">对方在「好友 → 扫一扫」扫这张图，或者在「搜 ID 加好友」里输这个号</div>'
+    + '<div style="font-size:20px;letter-spacing:2px;color:#4a4a42;margin:8px 0;">' + esc(uid || '—') + '</div>'
+    + '</div>'
+    + '<div class="btns">'
+    + '<button class="cancel" onclick="closeModal()">关闭</button>'
+    + '<button class="ok" onclick="copyUid()">复制 ID</button>'
+    + '</div>';
+  document.getElementById('modal').classList.add('open');
+  __loadQr();
+}
+
+function copyUid() {
+  var uid = (me && me.uid) || '';
+  if (!uid) { toast('没有 ID'); return; }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(uid).then(function () { toast('已复制'); });
+  } else {
+    toast('你的 ID：' + uid);
+  }
+}
+
+function showStyle() {
+  toast('当前为浅色主题');
+}
+
+</script>
+<script>
+function safeBack(fallback) {
+  try {
+    // 从本站别的页面进来的，才有"上一页"可回
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  // 直接打开 / 刷新：兜底回指定页面
+  location.replace(fallback || 'index.html');
+}
+</script>
+<script>
+
+// ===== 年龄 / 星座（群聊标签）=====
+function editBirth() {
+  if (!me) { toast('资料还没加载好'); return; }
+  var box = document.getElementById('box');
+  var y = me.birthYear || '';
+  box.innerHTML = '<h3>出生年份</h3>'
+    + '<div style="font-size:12px;color:#b0aa9c;margin:-6px 0 10px;">填了之后群聊才能按年龄段找到同龄人</div>'
+    + '<input id="editInput" type="number" min="1900" max="2020" value="' + esc(String(y)) + '" />'
+    + '<div class="btns">'
+    + '<button class="cancel" onclick="closeModal()">取消</button>'
+    + '<button class="ok" onclick="saveBirth()">保存</button>'
+    + '</div>';
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('editInput').focus();
+}
+
+async function saveBirth() {
+  var v = document.getElementById('editInput').value.trim();
+  var y = parseInt(v, 10);
+  if (!y || y < 1900 || y > new Date().getFullYear()) { toast('填个合理的出生年份，比如 1998'); return; }
+  var r = await api('/user/me', { method: 'PATCH', body: { birthYear: y } });
+  if (r.code !== 0) { toast(r.msg || '保存失败'); return; }
+  if (r.data && r.data.user) me = r.data.user; else me.birthYear = y;
+  closeModal();
+  refresh();
+  toast('已保存');
+}
+
+var ZODIACS = ["白羊", "金牛", "双子", "巨蟹", "狮子", "处女", "天秤", "天蝎", "射手", "摩羯", "水瓶", "双鱼"];
+
+function editZodiac() {
+  if (!me) { toast('资料还没加载好'); return; }
+  var box = document.getElementById('box');
+  var cells = ZODIACS.map(function (z) {
+    var on = me.zodiac === z;
+    return '<div onclick="saveZodiac(\'' + z + '\')" style="padding:10px 0;border-radius:10px;text-align:center;cursor:pointer;font-size:14px;'
+      + (on ? 'background:#a8b89c;color:#fff;' : 'background:#f5f2ec;color:#4a4a42;') + '">' + z + '座</div>';
+  }).join('');
+  box.innerHTML = '<h3>星座</h3>'
+    + '<div style="font-size:12px;color:#b0aa9c;margin:-6px 0 10px;">群聊「星迹」按星座匹配</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">' + cells + '</div>'
+    + '<div class="btns"><button class="cancel" onclick="closeModal()">取消</button></div>';
+  document.getElementById('modal').classList.add('open');
+}
+
+async function saveZodiac(z) {
+  var r = await api('/user/me', { method: 'PATCH', body: { zodiac: z } });
+  if (r.code !== 0) { toast(r.msg || '保存失败'); return; }
+  if (r.data && r.data.user) me = r.data.user; else me.zodiac = z;
+  closeModal();
+  refresh();
+  toast('已保存');
+}
+
+</script>
+<script>
+
+// ===== 省份（同省群的标签）=====
+var PROVINCES = ["北京","天津","河北","山西","内蒙古","辽宁","吉林","黑龙江",
+  "上海","江苏","浙江","安徽","福建","江西","山东","河南",
+  "湖北","湖南","广东","广西","海南","重庆","四川","贵州",
+  "云南","西藏","陕西","甘肃","青海","宁夏","新疆","香港","澳门","台湾"];
+
+function editProvince() {
+  if (!me) { toast('资料还没加载好'); return; }
+  var box = document.getElementById('box');
+  var cells = PROVINCES.map(function (p) {
+    var on = me.province === p;
+    return '<div onclick="saveProvince(\'' + p + '\')" style="padding:9px 0;border-radius:9px;text-align:center;cursor:pointer;font-size:13px;'
+      + (on ? 'background:#a8b89c;color:#fff;' : 'background:#f5f2ec;color:#4a4a42;') + '">' + p + '</div>';
+  }).join('');
+  box.innerHTML = '<h3>省份</h3>'
+    + '<div style="font-size:12px;color:#b0aa9c;margin:-6px 0 10px;">群聊「同省群」按省份匹配；填地址也会自动识别省份</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:46vh;overflow:auto;">' + cells + '</div>'
+    + '<div class="btns"><button class="cancel" onclick="closeModal()">取消</button></div>';
+  document.getElementById('modal').classList.add('open');
+}
+
+async function saveProvince(p) {
+  var r = await api('/user/me', { method: 'PATCH', body: { province: p } });
+  if (r.code !== 0) { toast(r.msg || '保存失败'); return; }
+  if (r.data && r.data.user) me = r.data.user; else me.province = p;
+  closeModal();
+  refresh();
+  toast('已保存');
+}
+
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+<script>
+// ===== 我的主页二维码（后端 /user/qrcode 生成 SVG）=====
+//   扫出来是「打开我的主页」的链接，别人扫一下就能看主页、加关注。
+//   用 fetch 拿 blob 再塞给 <img>，因为 <img src> 带不了 Authorization 头。
+async function __loadQr() {
+  var box = document.getElementById('qrBox');
+  if (!box) return;
+  var id = (me && me.id) || '';
+  if (!id) { box.innerHTML = '<div style="color:#b0aa9c;font-size:13px;">资料还没加载好</div>'; return; }
+
+  var link = location.origin + '/diary-public.html?profileUserId=' + encodeURIComponent(id);
+  box.innerHTML = '<div style="color:#b0aa9c;font-size:13px;">生成中…</div>';
+
+  try {
+    var r = await fetch(apiBase() + '/user/qrcode?text=' + encodeURIComponent(link), {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var blob = await r.blob();
+    var url = URL.createObjectURL(blob);
+    box.innerHTML = '<img src="' + url + '" alt="我的二维码" style="width:200px;height:200px;display:block;margin:0 auto;border-radius:10px;" />'
+      + '<div style="font-size:12px;color:#a8a294;margin-top:10px;word-break:break-all;">' + link + '</div>';
+  } catch (e) {
+    box.innerHTML = '<div style="color:#c07a5a;font-size:13px;">二维码生成失败：' + (e.message || e) + '</div>';
+  }
+}
+</script>
+</body>
+</html>

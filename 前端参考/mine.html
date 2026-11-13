@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f7f5f1; color: #3a3a34;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  #content { flex: 1; overflow-y: auto; }
+
+  .profile {
+    display: flex; align-items: center; gap: 14px;
+    background: #fff; margin: 18px 16px 0; padding: 18px; border-radius: 14px;
+  }
+  .profile .avatar {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #d8e4d0; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: #7d9b6a; overflow: hidden; flex-shrink: 0;
+  }
+  .profile .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  /* 首字垫底、图片覆盖：不然文字和图会并排各占一半 */
+  .profile .avatar { position: relative; }
+  .profile .avatar .av-txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .profile .avatar img { position: relative; z-index: 1; }
+  .profile .info .name { font-size: 17px; color: #4a4a42; }
+  .profile .info .sign { font-size: 12px; color: #b0aa9c; margin-top: 5px; }
+
+  .menu { background: #fff; margin: 14px 16px; border-radius: 14px; overflow: hidden; }
+  .menu .item {
+    display: flex; align-items: center;
+    padding: 15px 18px; border-bottom: 1px solid #f2efe9; cursor: pointer;
+  }
+  .menu .item:last-child { border-bottom: none; }
+  .menu .item:active { background: #f8f6f2; }
+  .menu .item .ic { font-size: 17px; width: 26px; }
+  .menu .item .lbl { flex: 1; font-size: 15px; color: #4a4a42; }
+  .menu .item .arrow { font-size: 18px; color: #cfc9bd; }
+
+  .my-diaries { padding: 10px 16px 30px; }
+  .sec-title { font-size: 13px; color: #a8a294; margin: 6px 4px 12px; }
+
+  .d-card {
+    position: relative; border-radius: 14px; overflow: hidden;
+    margin-bottom: 14px;
+    background-size: cover; background-position: center;
+    min-height: 180px; display: flex; align-items: flex-end;
+    cursor: pointer;
+  }
+  .d-card::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.1) 60%);
+  }
+  .d-card .txt {
+    position: relative; z-index: 2; padding: 16px;
+    color: #fff; font-size: 15px; line-height: 1.7;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6); white-space: pre-wrap;
+  }
+  .d-card .dt {
+    position: absolute; top: 12px; right: 14px; z-index: 2;
+    font-size: 11px; color: rgba(255,255,255,0.8);
+  }
+  .empty-tip {
+    text-align: center; color: #b8b2a4; font-size: 15px;
+    line-height: 2; padding: 40px 20px;
+  }
+
+  /* 底部导航 */
+  #tabbar { display: flex; border-top: 1px solid #e6e2da; background: #fbfaf8; flex-shrink: 0; }
+  .tab { flex: 1; text-align: center; padding: 10px 0 12px; font-size: 12px; color: #a8a294; cursor: pointer; user-select: none; }
+  .tab.on { color: #2b7fff; background: #e8f1ff; border-radius: 10px; margin: 4px; padding: 6px 0 8px; }
+  .tab .ico { font-size: 20px; display: block; margin-bottom: 2px; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<div id="content">
+  <div class="profile" onclick="location.href='settings.html'">
+    <div class="avatar" id="myAvatar">☺</div>
+    <div class="info">
+      <div class="name" id="myName">未设置ID</div>
+      <div class="sign" id="mySign">还没写个性签名</div>
+    </div>
+  </div>
+
+  <div class="menu">
+    <div class="item" onclick="location.href='my-list.html?type=like'">
+      <div class="ic">♡</div><div class="lbl">我的喜欢</div><div class="arrow">›</div>
+    </div>
+    <div class="item" onclick="location.href='my-list.html?type=favorite'">
+      <div class="ic">☆</div><div class="lbl">我的收藏</div><div class="arrow">›</div>
+    </div>
+    <div class="item" onclick="location.href='blank.html?t=我的粉丝'">
+        <div class="ic">♡</div><div class="lbl">我的粉丝</div>
+      </div>
+      <div class="item" onclick="location.href='blank.html?t=我的漂流瓶'">
+      <div class="ic">🍾</div><div class="lbl">我的漂流瓶</div><div class="arrow">›</div>
+    </div>
+    <div class="item" onclick="location.href='blank.html?t=浏览记录'">
+      <div class="ic">🕓</div><div class="lbl">浏览记录</div><div class="arrow">›</div>
+    </div>
+    <div class="item" onclick="location.href='bless-sent.html?type=received'">
+      <div class="ic">✿</div><div class="lbl">我收到的祝福</div><div class="arrow">›</div>
+    </div>
+    <div class="item" onclick="location.href='bless-sent.html'">
+      <div class="ic">✈</div><div class="lbl">我送出去的祝福</div><div class="arrow">›</div>
+    </div>
+  </div>
+
+  <div class="my-diaries">
+    <div class="sec-title">我公开的日记</div>
+    <div id="diaryArea"></div>
+  </div>
+</div>
+
+<div id="tabbar">
+  <div class="tab" onclick="location.href='index.html?logged=1'"><span class="ico">⌂</span>首页</div>
+  <div class="tab" onclick="location.href='index.html?logged=1&tab=friend'"><span class="ico">☰</span>好友</div>
+  <div class="tab" onclick="location.href='discover.html'"><span class="ico">◎</span>发现</div>
+  <div class="tab" onclick="location.href='diary.html'"><span class="ico">✎</span>日记</div>
+  <div class="tab on" onclick="location.href='mine.html'"><span class="ico">☺</span>我的</div>
+</div>
+
+<script src="api.js"></script>
+<script>
+// ===== 我的页：接 /api/user/me 和 /api/diary/mine =====
+function esc(t) {
+  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const area = document.getElementById('diaryArea');
+
+(async function () {
+  const r = await api('/user/me');
+  if (r.code !== 0) {
+    if (r.code !== 401) area.innerHTML = '<div class="empty-tip">' + esc(r.msg || '加载失败') + '</div>';
+    return;
+  }
+  const u = r.data.user;
+  setUser(u);
+
+  const av = document.getElementById('myAvatar');
+  // 首字垫底（绝对定位），有头像再把图盖上去
+  //   不能直接 av.textContent = 首字：.avatar 是 flex 容器，
+  //   文字和图片会并排各占一半，看起来像被切成两半。
+  const _first = (Array.from((u.nickname || '☺'))[0] || '☺');
+  const _safe = _first.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+  av.innerHTML = '<span class="av-txt">' + _safe + '</span>';
+  if (u.avatar) {
+    const img = document.createElement('img');
+    img.alt = '';
+    img.onerror = function () { img.remove(); };
+    img.src = u.avatar;
+    av.appendChild(img);
+  }
+
+  document.getElementById('myName').textContent = u.nickname || '未设置昵称';
+  document.getElementById('mySign').textContent = u.signature || '还没写个性签名';
+
+  // 我的日记：只要公开的
+  const d = await api('/diary/mine?size=50');
+  const list = ((d.data && d.data.list) || []).filter(function (x) { return x.visibility === 'public'; });
+
+  if (!list.length) {
+    area.innerHTML = '<div class="empty-tip">世界破破烂烂，总有人缝缝补补<br>说不定ta就是那个人呢</div>';
+    return;
+  }
+
+  list.forEach(function (e) {
+    const div = document.createElement('div');
+    div.className = 'd-card';
+    if (e.cover) div.style.backgroundImage = 'url("' + esc(e.cover) + '")';
+    div.innerHTML = '<div class="dt">' + esc(e.day || '') + '</div>'
+      + '<div class="txt">' + esc(e.content || '') + '</div>';
+    div.onclick = function () { location.href = 'diary-write.html?date=' + encodeURIComponent(e.day || ''); };
+    area.appendChild(div);
+  });
+})();
+
+
+// ===== 从别的页面返回时，如果是从缓存恢复的，就重新加载 =====
+//   不然删掉的那篇日记还会留在列表里（浏览器把旧页面直接还回来了）。
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) location.reload();
+});
+
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+</body>
+</html>

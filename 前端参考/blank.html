@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>记录</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f7f5f1; color: #3a3a34;
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header { display: flex; align-items: center; padding: 18px 20px 12px; flex-shrink: 0; }
+  header .back { font-size: 22px; color: #7d9b6a; cursor: pointer; padding: 0 10px; }
+  header .tt { font-size: 17px; color: #4a4a42; }
+  .list { flex: 1; overflow-y: auto; padding: 4px 16px 30px; }
+  .row { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; display: flex; }
+  .row .main { flex: 1; min-width: 0; }
+  .row .txt { font-size: 14px; color: #4a4a42; line-height: 1.6; word-break: break-word; }
+  .row .sub { font-size: 12px; color: #a8a294; margin-top: 6px; }
+  .empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #b8b2a4; font-size: 15px; }
+  .bottle-link { text-decoration: underline; cursor: pointer; pointer-events: auto; }
+  /* 浏览记录：网格卡片（手机 2 列，宽屏 3 列） */
+  .view-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px; align-items: start; width: 100%; min-width: 0;
+  }
+  @media (min-width: 640px) { .view-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .view-grid .view-card { margin-bottom: 0; }
+  .view-card { background: none; padding: 0; display: block; border-radius: 14px; min-width: 0; }
+  .view-card .main {
+    position: relative; min-height: 132px; background-size: cover;
+    background-position: center top; background-color: #e9e3d7;
+    border-radius: 14px; overflow: hidden; cursor: pointer;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 12px;
+  }
+  .view-card .main::after {
+    content: ''; position: absolute; inset: 0; border-radius: 14px;
+    background: linear-gradient(to top, rgba(0,0,0,.66), rgba(0,0,0,0) 72%);
+  }
+  .view-card .txt {
+    position: relative; z-index: 2; color: #fff; font-size: 13px; line-height: 1.55;
+    text-shadow: 0 1px 3px rgba(0,0,0,.55);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    word-break: break-word; overflow-wrap: anywhere;
+  }
+  .view-card .sub {
+    position: relative; z-index: 2; color: rgba(255,255,255,.8); font-size: 10px; margin-top: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* 我的漂流瓶：信纸卡片 */
+  .bottle-card { background: none; padding: 0; display: block; margin-bottom: 12px; }
+  .bottle-card .main {
+    position: relative; min-height: 150px; border-radius: 14px; overflow: hidden;
+    background-size: cover; background-position: center; background-color: #f3efe6;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 22px 20px;
+  }
+  .bottle-card .main::before {
+    content: ''; position: absolute; left: 18px; right: 18px; top: 26px; bottom: 26px;
+    background: rgba(255,253,248,.62); border-radius: 12px;
+  }
+  .bottle-card .txt {
+    position: relative; z-index: 1;
+    color: #4a4a42; font-size: 15px; line-height: 1.75; text-align: center;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+    word-break: break-word;
+  }
+  .bottle-card .sub { position: relative; z-index: 1; color: #8b8577; font-size: 11px; margin-top: 12px; text-align: center; }
+  /* 我的粉丝 */
+  .fan-row { align-items: center; gap: 12px; }
+  .fan-av {
+    position: relative; width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    background: #dbe7f8; color: #3f6ea8; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; overflow: hidden; cursor: pointer;
+  }
+  .fan-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .fan-info { flex: 1; min-width: 0; }
+  .fan-nick { font-size: 15px; color: #4a4a42; }
+  .fan-desc { font-size: 12px; color: #b0aa9c; margin-top: 3px; }
+  .fan-btn {
+    border: 0; background: #a8b89c; color: #fff; font-size: 13px;
+    padding: 7px 14px; border-radius: 14px; cursor: pointer; flex-shrink: 0;
+  }
+  .fan-btn.done { background: #eee9e1; color: #9a9488; cursor: default; }
+  .fan-tip { font-size: 12px; color: #c0bab0; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <header>
+    <div class="back" onclick="safeBack('mine.html')">‹</div>
+    <div class="tt" id="title">记录</div>
+  </header>
+  <div class="list" id="list"></div>
+  <script src="api.js"></script>
+  <script>
+  // 这个页原来只会显示"这里还是空的 · 待做"，现在按 ?t= 显示不同记录
+  const t = new URLSearchParams(location.search).get('t') || '';
+  document.getElementById('title').textContent = t || '记录';
+  const listEl = document.getElementById('list');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function empty(msg) {
+    listEl.innerHTML = '<div class="empty">' + esc(msg) + '</div>';
+  }
+
+  async function loadViews() {
+    const r = await api('/view/mine?size=50');
+    const list = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+    if (!list.length) { empty('还没有浏览记录'); return; }
+
+    listEl.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.className = 'view-grid';
+    const __pal = ['#e9e3d7', '#dfe7dd', '#e4e1ea', '#eee2db', '#dde6e9', '#eae4d8'];
+    list.forEach(function (d) {
+      const row = document.createElement('div');
+      row.className = 'view-card';
+      row.onclick = function () { location.href = 'diary-public.html?id=' + d.id; };
+
+      const main = document.createElement('div');
+      main.className = 'main';
+      const isDemo = /\/uploads\/demo_\d+\.svg$/.test(d.img || '');
+      if (d.img && !isDemo) {
+        main.style.backgroundImage = "url('" + d.img + "')";
+      } else {
+        main.style.background = __pal[(Number(d.id) || 0) % __pal.length];
+      }
+
+      const txt = document.createElement('div');
+      txt.className = 'txt';
+      txt.textContent = d.text || '';
+
+      const sub = document.createElement('div');
+      sub.className = 'sub';
+      sub.textContent = (d.nick || '') + ' · ' + (d.dateKey || '');
+
+      main.appendChild(txt);
+      main.appendChild(sub);
+      row.appendChild(main);
+      grid.appendChild(row);
+    });
+    listEl.appendChild(grid);
+  }
+
+  async function loadReports() {
+    const r = await api('/report/mine?size=50');
+    const list = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+    if (!list.length) { empty('还没有举报记录'); return; }
+
+    const TYPE = { diary: '日记', comment: '评论', user: '用户', message: '私信' };
+    listEl.innerHTML = '';
+    list.forEach(function (x) {
+      const row = document.createElement('div');
+      row.className = 'row report-row';
+      row.style.cursor = 'pointer';
+      row.innerHTML =
+        '<div class="main"><div class="txt">举报' + esc(TYPE[x.targetType] || x.targetType)
+        + ' #' + x.targetId + (x.reason ? '：' + esc(x.reason) : '') + '</div>'
+        + '<div class="sub">' + esc(x.statusText || '') + ' · ' + esc(x.createdAt || '')
+        + '<span style="color:#a8b89c;margin-left:8px;">查看详情 ›</span></div></div>';
+      // ★ 点开看详情：谁发的、发了什么、什么时候、举报理由 ★
+      row.onclick = function () { reportDetail(x); };
+      listEl.appendChild(row);
+    });
+  }
+
+
+// ============================================================
+//  举报详情弹层
+//
+//  举报记录原来只有"私信 #988 · 辱骂攻击"，看的人根本想不起来举报了什么。
+//  点开后显示：发布者、内容原文、时间、举报理由、当前状态。
+// ============================================================
+function reportDetail(x) {
+  var old = document.getElementById('__reportDetailMask');
+  if (old) old.remove();
+
+  var TYPE = { diary: '日记', comment: '评论', user: '用户', message: '私信' };
+  var info = x.targetInfo || {};
+
+  var mask = document.createElement('div');
+  mask.id = '__reportDetailMask';
+  mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;'
+    + 'display:flex;align-items:center;justify-content:center;padding:0 24px;';
+
+  var rows = '';
+  function line(k, v) {
+    if (!v) return;
+    rows += '<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f0ece4;">'
+      + '<div style="width:60px;flex-shrink:0;color:#a8a294;font-size:12px;padding-top:2px;">' + k + '</div>'
+      + '<div style="flex:1;color:#4a4a42;font-size:14px;line-height:1.7;word-break:break-word;">' + esc(v) + '</div>'
+      + '</div>';
+  }
+
+  line('类型', TYPE[x.targetType] || x.targetType);
+  line('发布者', info.nick || '');
+  line('内容', info.content || '（内容已删除或当前不可访问）');
+  line('发布时间', info.createdAt || '');
+  line('举报时间', x.createdAt || '');
+  line('举报理由', x.reason || '');
+  line('处理状态', x.statusText || '');
+
+  mask.innerHTML =
+    '<div style="width:100%;max-width:420px;max-height:85vh;overflow-y:auto;background:#fbfaf8;border-radius:18px;padding:20px;'
+    + 'box-shadow:0 12px 40px rgba(0,0,0,.18);">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    + '<b style="font-size:16px;color:#4a4a42;">举报详情</b>'
+    + '<span style="color:#a8a294;font-size:13px;cursor:pointer;" data-close>关闭</span>'
+    + '</div>' + rows + '</div>';
+
+  document.body.appendChild(mask);
+  mask.addEventListener('click', function (e) {
+    if (e.target === mask || e.target.hasAttribute('data-close')) mask.remove();
+  });
+}
+
+  (async function boot() {
+    if (t === '浏览记录') return loadViews();
+    if (t === '举报记录') return loadReports();
+    empty('这里还是空的');
+  })();
+  
+// ===== 我的漂流瓶：捞过的 / 扔过的 =====
+// 这段追加到 blank.html（记录页）的脚本末尾。
+// 后端接口：
+//   GET /api/bottle/picked   我捞过的瓶子
+//   GET /api/bottle/mine     我扔进海里的瓶子
+
+
+// ===== 我的粉丝：谁关注了我，可以一键回关 =====
+(function fanPage() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('t') !== '我的粉丝') return;
+
+  const listEl = document.getElementById('list');
+  if (!listEl) return;
+
+  function esc2(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function load() {
+    listEl.innerHTML = '<div class="empty" style="display:block;padding:20px 0;">加载中…</div>';
+    const r = await api('/interact/my-fans');
+    if (r.code !== 0) {
+      listEl.innerHTML = '';
+      const error = document.createElement('div');
+      error.className = 'empty';
+      error.textContent = r.msg || '粉丝列表加载失败，请稍后重试';
+      listEl.appendChild(error);
+      return;
+    }
+    const list = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+
+    if (!list.length) {
+      listEl.innerHTML = '<div class="empty">还没有人关注你<br><span class="fan-tip">多发几篇日记，会有人来的</span></div>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    list.forEach(function (u) {
+      const row = document.createElement('div');
+      row.className = 'row fan-row';
+
+      const av = document.createElement('div');
+      av.className = 'fan-av';
+      av.textContent = (u.nick || '匿').charAt(0);
+      if (u.avatar) {
+        const img = document.createElement('img');
+        img.src = u.avatar;
+        img.alt = '';
+        img.onerror = function () { this.remove(); };
+        av.appendChild(img);
+      }
+      av.onclick = function (e) {
+        e.stopPropagation();
+        location.href = 'diary-public.html?profileUserId=' + encodeURIComponent(u.userId);
+      };
+
+      const info = document.createElement('div');
+      info.className = 'fan-info';
+      info.innerHTML = '<div class="fan-nick">' + esc2(u.nick || 'ta') + '</div>'
+        + '<div class="fan-desc">' + (u.diaryCount || 0) + ' 篇日记 · ' + (u.fans || 0) + ' 粉丝</div>';
+
+      const btn = document.createElement('button');
+      btn.className = 'fan-btn';
+      if (u.isFollowedBack) {
+        btn.textContent = '互相关注';
+        btn.disabled = true;
+        btn.classList.add('done');
+      } else {
+        btn.textContent = '回关';
+        btn.onclick = async function (e) {
+          e.stopPropagation();
+          btn.disabled = true;
+          const rr = await api('/interact/follow/' + u.userId, { method: 'POST' });
+          if (rr.code === 0 && rr.data && rr.data.followed) {
+            btn.textContent = '互相关注';
+            btn.classList.add('done');
+          } else {
+            btn.disabled = false;
+            const error = document.createElement('div');
+            error.className = 'fan-tip';
+            error.textContent = rr.msg || '回关失败，请重试';
+            info.appendChild(error);
+          }
+        };
+      }
+
+      row.appendChild(av);
+      row.appendChild(info);
+      row.appendChild(btn);
+      listEl.appendChild(row);
+    });
+  }
+
+  load();
+})();
+
+(function bottlePage() {
+  const params = new URLSearchParams(location.search);
+  const t = params.get('t') || '';
+  if (t !== '我的漂流瓶') return;
+
+  const listEl = document.getElementById('list');
+  if (!listEl) return;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function section(title) {
+    const h = document.createElement('div');
+    h.textContent = title;
+    h.style.cssText = 'font-size:13px;color:#a8a294;margin:16px 4px 8px;';
+    listEl.appendChild(h);
+  }
+
+  // 微光同行那 7 张信纸；按瓶子 id 取，同一个瓶子信纸固定
+  const LETTERS = [1, 2, 3, 4, 5, 6, 7].map(function (n) {
+    return 'assets/weiguang/letters/letter' + n + '.jpg';
+  });
+
+  function card(item, extraLine) {
+    const row = document.createElement('div');
+    row.className = 'row bottle-card';
+
+    const main = document.createElement('div');
+    main.className = 'main';
+    const paper = LETTERS[(Number(item.id) || 0) % LETTERS.length];
+    main.style.backgroundImage = "url('" + paper + "')";
+
+    const txt = document.createElement('div');
+    txt.className = 'txt';
+    txt.textContent = item.content || '（空瓶子）';
+
+    const sub = document.createElement('div');
+    sub.className = 'sub';
+    sub.textContent = extraLine;
+
+    main.appendChild(txt);
+    main.appendChild(sub);
+    row.appendChild(main);
+    listEl.appendChild(row);
+  }
+
+  async function load() {
+    listEl.innerHTML = '<div class="empty" style="display:block;padding:20px 0;">加载中…</div>';
+
+    const [picked, mine] = await Promise.all([
+      api('/bottle/picked?size=50'),
+      api('/bottle/mine?size=50'),
+    ]);
+
+    const ps = (picked.code === 0 && picked.data && picked.data.list) ? picked.data.list : [];
+    const ms = (mine.code === 0 && mine.data && mine.data.list) ? mine.data.list : [];
+
+    listEl.innerHTML = '';
+
+    if (!ps.length && !ms.length) {
+      listEl.innerHTML = '<div class="empty">还没有漂流瓶的记录<br><span class="bottle-link">去微光同行扔一个、或捞一个吧</span></div>';
+      var link = listEl.querySelector('.bottle-link');
+      if (link) link.onclick = function (e) { e.stopPropagation(); location.href = 'weiguang.html'; };
+      return;
+    }
+
+    // ---- 我捞过的 ----
+    if (ps.length) {
+      section('我捞过的 · ' + ps.length + ' 个');
+      ps.forEach(function (it) {
+        const when = (it.pickedAt || it.createdAt || '').slice(5, 16).replace('-', '.');
+        const from = it.isAnon ? '一个陌生人' : (it.nick || '一位陌生人');
+        card(it, when + ' · 来自 ' + from + ' · 被捞过 ' + (it.pickCount || 0) + ' 次');
+      });
+    }
+
+    // ---- 我扔出去的 ----
+    if (ms.length) {
+      section('我扔出去的 · ' + ms.length + ' 个');
+      ms.forEach(function (it) {
+        const when = (it.createdAt || '').slice(5, 16).replace('-', '.');
+        card(it, when + ' · 被捞过 ' + (it.pickCount || 0) + ' 次');
+      });
+    }
+  }
+
+  load();
+})();
+
+</script>
+<script>
+function safeBack(fallback) {
+  try {
+    // 从本站别的页面进来的，才有"上一页"可回
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  // 直接打开 / 刷新：兜底回指定页面
+  location.replace(fallback || 'index.html');
+}
+</script>
+</body>
+</html>

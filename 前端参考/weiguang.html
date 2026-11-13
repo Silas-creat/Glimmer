@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>微光同行</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #bfe3ee;
+  }
+
+  /* 海：使用源码里的海面照片，保留原来的梦幻感 */
+  #sea {
+    position: absolute; inset: 0;
+    background: #bfe3ee url('assets/weiguang/sea.jpg') center / cover no-repeat;
+    overflow: hidden;
+  }
+  #sea::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.10) 0%,
+      rgba(255,255,255,0) 30%,
+      rgba(31,103,126,0.10) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 漂流瓶层 */
+  #bottleLayer {
+    position: absolute; inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* 返回 */
+  .back {
+    position: absolute;
+    top: calc(18px + env(safe-area-inset-top));
+    left: 18px; z-index: 10;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    color: #2f6d80;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; cursor: pointer;
+    box-shadow: 0 2px 12px rgba(40,80,100,0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .back:active { transform: scale(.94); }
+
+  /* 漂流瓶：外层横向漂移，内层轻轻上下浮动 */
+  .bottle {
+    position: absolute;
+    left: 100%;
+    top: var(--top, 55%);
+    width: var(--size, 90px);
+    height: var(--size, 90px);
+    cursor: pointer;
+    pointer-events: auto;
+    will-change: transform;
+    filter: drop-shadow(0 8px 14px rgba(20,60,80,0.18));
+    animation: drift var(--duration, 32s) linear infinite;
+    animation-delay: var(--delay, 0s);
+  }
+  .bottle img {
+    display: block;
+    width: 100%; height: 100%;
+    animation: bob var(--bob, 5s) ease-in-out infinite;
+    pointer-events: none;
+    user-select: none;
+  }
+  .bottle:hover {
+    z-index: 5;
+    filter: drop-shadow(0 0 14px rgba(255,255,255,0.85)) drop-shadow(0 8px 16px rgba(20,60,80,0.28));
+  }
+  #sea.paused .bottle,
+  #sea.paused .bottle img {
+    animation-play-state: paused;
+  }
+
+  @keyframes drift {
+    0%   { transform: translate3d(0, 0, 0) rotate(-4deg); }
+    50%  { transform: translate3d(calc(-50vw - 80px), -8px, 0) rotate(2deg); }
+    100% { transform: translate3d(calc(-100vw - 240px), 6px, 0) rotate(-3deg); }
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-7px) rotate(2deg); }
+  }
+
+  /* 新扔出的瓶子：先亮一下，再继续漂 */
+  .bottle.new {
+    animation: drift var(--duration, 32s) linear infinite,
+               glow 2.4s ease-out;
+    animation-delay: var(--delay, 0s), 0s;
+  }
+  @keyframes glow {
+    0%   { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
+    35%  { filter: drop-shadow(0 0 22px rgba(255,255,255,0.95)); }
+    100% { filter: drop-shadow(0 8px 14px rgba(20,60,80,0.18)); }
+  }
+
+  /* 弹出的信 */
+  #letterMask {
+    position: fixed; inset: 0; z-index: 20;
+    background: rgba(20,40,50,0.32);
+    display: none; align-items: center; justify-content: center;
+    padding: 30px;
+  }
+  #letterMask.show { display: flex; }
+  .letter {
+    background-color: #fdfbf5;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 12px;
+    padding: clamp(64px, 12vh, 96px) clamp(34px, 9vw, 52px) clamp(56px, 10vh, 82px);
+    width: min(88vw, 400px);
+    aspect-ratio: 0.72;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 22px 60px rgba(10,40,55,0.35);
+    position: relative;
+  }
+  .letter .label {
+    flex-shrink: 0;
+    margin: 0 0 12px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #6f6a60;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.95), 0 0 6px rgba(255,255,255,0.55);
+  }
+  .letter .read-area {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .letter .txt {
+    font-size: 16px; color: #3f3a33; line-height: 2;
+    white-space: pre-wrap; word-break: break-word;
+    text-align: left;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.95), 0 0 7px rgba(255,255,255,0.55);
+    font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+  }
+  .letter .write-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .letter .write-area[hidden],
+  .letter .read-area[hidden] { display: none !important; }
+  #letterEditor {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 0;
+    font-size: 16px;
+    line-height: 2;
+    color: #3f3a33;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.95), 0 0 7px rgba(255,255,255,0.55);
+    font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+  }
+  #letterEditor::placeholder { color: rgba(90,80,70,0.48); }
+  .letter .letter-send {
+    position: absolute; top: 10px; left: 12px;
+    border: none; background: transparent;
+    padding: 2px 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: #3f6b58;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.95), 0 0 6px rgba(255,255,255,0.55);
+    z-index: 2;
+  }
+  .letter .letter-send[hidden] { display: none !important; }
+  .letter .letter-send:active { transform: scale(.96); }
+  .letter .close {
+    position: absolute; top: 10px; right: 12px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #6b655a; cursor: pointer;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+    z-index: 2;
+  }
+
+  /* 底部输入区 */
+  #bottom {
+    position: absolute;
+    left: 50%;
+    bottom: calc(22px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: calc(100% - 36px);
+    max-width: 520px;
+    z-index: 15;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 18px;
+    box-shadow: 0 8px 28px rgba(20,60,80,0.16);
+    overflow: hidden;
+  }
+  #writeBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    padding: 16px 18px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    color: #2f5566;
+    text-align: center;
+  }
+  #writeBtn:active { transform: scale(.99); }
+
+  /* 发送确认 */
+  .confirm-mask, .success-mask {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(20,40,50,0.38);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .confirm-mask[hidden], .success-mask[hidden] { display: none !important; }
+  .confirm-card {
+    width: min(86vw, 340px);
+    background: #fdfbf5;
+    border-radius: 16px;
+    padding: 24px 22px 18px;
+    box-shadow: 0 20px 50px rgba(10,40,55,0.3);
+    text-align: center;
+  }
+  .confirm-text {
+    font-size: 15px;
+    line-height: 1.9;
+    color: #4a4a42;
+    margin-bottom: 18px;
+  }
+  .confirm-btns { display: flex; gap: 10px; }
+  .confirm-btn {
+    flex: 1;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 0;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .confirm-btn.cancel { background: #f0ede6; color: #7a756a; }
+  .confirm-btn.ok { background: #a8b89c; color: #fff; }
+  .confirm-btn:active { transform: scale(.97); }
+
+  /* 发送成功 */
+  .success-mask {
+    z-index: 50;
+    background: rgba(20,40,50,0.28);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+  }
+  .success-mask.show { opacity: 1; pointer-events: auto; }
+  .success-card {
+    width: min(86vw, 360px);
+    background: rgba(253,251,245,0.97);
+    border-radius: 18px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(10,40,55,0.25);
+  }
+  .success-icon { font-size: 24px; color: #8aa67a; margin-bottom: 10px; }
+  .success-text { font-size: 15px; line-height: 1.9; color: #4a4a42; }
+
+  /* 提示 */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(104px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 8px);
+    z-index: 30;
+    background: rgba(35,72,85,0.86);
+    color: #fff;
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .bless-open {
+    margin-top: 14px; border: none; border-radius: 12px;
+    padding: 10px 18px; font-size: 14px; cursor: pointer;
+    background: rgba(255,255,255,0.85); color: #5f7a4f;
+    box-shadow: 0 4px 14px rgba(20,60,80,0.12);
+  }
+  .bless-open:active { transform: scale(.97); }
+  .bless-box { margin-top: 12px; display: flex; gap: 8px; align-items: flex-end; }
+  .bless-box[hidden] { display: none !important; }
+  .bless-box textarea {
+    flex: 1; min-height: 56px; border: 1px solid #e2ddd2; border-radius: 10px;
+    padding: 8px 10px; font-size: 13px; font-family: inherit; resize: none;
+    background: rgba(255,255,255,0.92); color: #3a3a34;
+  }
+  .bless-send {
+    border: none; border-radius: 10px; padding: 10px 14px;
+    background: #a8b89c; color: #fff; font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<div id="sea">
+  <div class="back" onclick="location.replace('index.html?tab=home')">‹</div>
+  <div id="bottleLayer"></div>
+</div>
+
+<!-- 弹出的信 -->
+<div id="letterMask" onclick="closeLetter()">
+  <div class="letter" id="letterCard" onclick="event.stopPropagation()">
+    <button class="letter-send" id="letterSendTop" onclick="askSend()" hidden>发送</button>
+    <div class="close" onclick="closeLetter()">×</div>
+    <div class="label" id="letterLabel">来自海上的漂流瓶</div>
+    <div class="read-area" id="letterRead">
+      <div class="txt" id="letterTxt"></div>
+      </div>
+    <div class="write-area" id="letterWrite" hidden>
+      <textarea id="letterEditor" placeholder="写下你的心愿…" maxlength="500"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- 发送前确认 -->
+<div id="confirmMask" class="confirm-mask" hidden onclick="closeConfirm()">
+  <div class="confirm-card" onclick="event.stopPropagation()">
+    <div class="confirm-text">你留下的心愿，将会被投入大海，想好了吗？</div>
+    <div class="confirm-btns">
+      <button class="confirm-btn cancel" onclick="closeConfirm()">我再改改</button>
+      <button class="confirm-btn ok" onclick="confirmSend()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 发送成功 -->
+<div id="successMask" class="success-mask" hidden onclick="hideSuccess()">
+  <div class="success-card" onclick="event.stopPropagation()">
+    <div class="success-icon">✿</div>
+    <div class="success-text">您的祝福已经汇入大海，<br>也许不久后的有缘人也会看到。</div>
+  </div>
+</div>
+
+<!-- 底部按钮：点开后在信纸上书写 -->
+<div id="bottom">
+  <button id="writeBtn" onclick="openWrite()">留下我的心愿，扔进海里</button>
+</div>
+
+<div id="toast"></div>
+
+<script src="api.js"></script>
+<script>
+if (!requireLogin()) { /* 未登录会跳登录页 */ }
+// ===== 假数据：别人的瓶子 =====
+const FAKE = [
+  '今天终于早睡了一次。',
+  '希望明天是个晴天。',
+  '有人也在熬夜吗？',
+  '我会好起来的，慢慢来。',
+  '谢谢你，陌生人。',
+  '有点想家了。',
+  '今天有好好吃饭。',
+  '如果累了，就停一停。'
+];
+
+const sea = document.getElementById('sea');
+const layer = document.getElementById('bottleLayer');
+const MAX_BOTTLES = 14;
+
+// 8 个瓶子错开大小、高度、速度和起始位置，看起来像真的在海上漂
+// 大瓶子放高一点、小瓶子放低一点，避免沉到输入框后面
+const VARIANTS = [
+  { scale: 1.70, top: 40, duration: 34, bob: 5.2 },
+  { scale: 1.05, top: 48, duration: 29, bob: 4.6 },
+  { scale: 0.72, top: 60, duration: 38, bob: 6.0 },
+  { scale: 1.35, top: 52, duration: 32, bob: 5.6 },
+  { scale: 0.90, top: 56, duration: 36, bob: 4.8 },
+  { scale: 0.62, top: 66, duration: 41, bob: 6.4 },
+  { scale: 1.15, top: 58, duration: 30, bob: 5.0 },
+  { scale: 0.80, top: 68, duration: 35, bob: 5.8 }
+];
+
+let placed = 0;
+
+function createBottle(text, isNew) {
+  if (layer.children.length >= MAX_BOTTLES) {
+    layer.removeChild(layer.firstElementChild);
+  }
+
+  const b = document.createElement('div');
+  b.className = 'bottle' + (isNew ? ' new' : '');
+  b.dataset.text = text;
+
+  const v = VARIANTS[placed % VARIANTS.length];
+  placed++;
+  const dur = v.duration;
+  // 负延迟：假瓶子一开始就分布在海面上；新瓶子从中段出现，像刚被扔出去
+  const delay = isNew
+    ? -(dur * 0.42)
+    : -(dur * (0.10 + (placed % VARIANTS.length) * 0.105));
+
+  b.style.setProperty('--size', `calc(clamp(56px, 13vw, 150px) * ${v.scale})`);
+  b.style.setProperty('--top', `${v.top + (Math.random() * 3 - 1.5)}%`);
+  b.style.setProperty('--duration', `${dur + (isNew ? 0 : Math.random() * 3 - 1.5)}s`);
+  b.style.setProperty('--delay', `${delay}s`);
+  b.style.setProperty('--bob', `${v.bob + Math.random() * 0.6}s`);
+
+  const img = document.createElement('img');
+  img.src = 'assets/weiguang/bottle.png';
+  img.alt = '';
+  img.draggable = false;
+  b.appendChild(img);
+
+  b.addEventListener('click', e => {
+    e.stopPropagation();
+    pickBottle();
+  });
+
+  layer.appendChild(b);
+  return b;
+}
+
+// ===== 开局放几个瓶子当海面装饰，点开时去后端“捞”一个真的 =====
+FAKE.forEach(t => createBottle(t, false));
+
+let currentBottleId = null;   // 当前捞到的瓶子（送祝福要用）
+
+async function pickBottle() {
+  const res = await api('/bottle/pick', { method: 'POST' });
+  if (res.code !== 0) { showToast(res.msg || '网络不太好，稍后再试'); return; }
+  if (!res.data) { showToast('海面上暂时没有新的瓶子'); return; }
+  currentBottleId = res.data.id;
+  showLetter(res.data.content || '（这个瓶子是空的）');
+}
+
+
+
+// ===== 随机信纸 =====
+const LETTER_BACKGROUNDS = [
+  'assets/weiguang/letters/letter1.jpg',
+  'assets/weiguang/letters/letter2.jpg',
+  'assets/weiguang/letters/letter3.jpg',
+  'assets/weiguang/letters/letter4.jpg',
+  'assets/weiguang/letters/letter5.jpg',
+  'assets/weiguang/letters/letter6.jpg',
+  'assets/weiguang/letters/letter7.jpg'
+];
+// 预加载，点开瓶子时信纸不会白一下
+LETTER_BACKGROUNDS.forEach(src => { const img = new Image(); img.src = src; });
+
+let lastLetterBg = -1;
+function pickLetterBackground() {
+  let i = Math.floor(Math.random() * LETTER_BACKGROUNDS.length);
+  // 避免连续两次弹出同一张信纸
+  if (LETTER_BACKGROUNDS.length > 1 && i === lastLetterBg) {
+    i = (i + 1 + Math.floor(Math.random() * (LETTER_BACKGROUNDS.length - 1))) % LETTER_BACKGROUNDS.length;
+  }
+  lastLetterBg = i;
+  return LETTER_BACKGROUNDS[i];
+}
+
+// ===== 打开信纸（mode: read 读信 / write 写信）=====
+function showLetter(text, mode = 'read') {
+  const card = document.getElementById('letterCard');
+  const readArea = document.getElementById('letterRead');
+  const writeArea = document.getElementById('letterWrite');
+  const label = document.getElementById('letterLabel');
+  const editor = document.getElementById('letterEditor');
+  const sendTop = document.getElementById('letterSendTop');
+
+  card.style.backgroundImage = `url('${pickLetterBackground()}')`;
+  document.getElementById('confirmMask').hidden = true;
+  resetSuccess();
+
+  if (mode === 'write') {
+    label.textContent = '写下你的心愿';
+    readArea.hidden = true;
+    writeArea.hidden = false;
+    sendTop.hidden = false;
+    editor.value = '';
+    setTimeout(() => editor.focus(), 120);
+  } else {
+    label.textContent = '来自海上的漂流瓶';
+    readArea.hidden = false;
+    writeArea.hidden = true;
+    sendTop.hidden = true;
+    document.getElementById('letterTxt').textContent = text;
+  }
+
+  document.getElementById('letterMask').classList.add('show');
+  sea.classList.add('paused');
+}
+
+function openWrite() {
+  showLetter('', 'write');
+}
+
+function closeLetter() {
+  document.getElementById('confirmMask').hidden = true;
+  document.getElementById('letterMask').classList.remove('show');
+  sea.classList.remove('paused');
+}
+
+// ===== 左上角发送：先确认 =====
+function askSend() {
+  const editor = document.getElementById('letterEditor');
+  const text = editor.value.trim();
+  if (!text) {
+    showToast('先写点什么吧');
+    editor.focus();
+    return;
+  }
+  document.getElementById('confirmMask').hidden = false;
+}
+
+function closeConfirm() {
+  document.getElementById('confirmMask').hidden = true;
+  setTimeout(() => document.getElementById('letterEditor').focus(), 100);
+}
+
+async function confirmSend() {
+  const editor = document.getElementById('letterEditor');
+  const text = editor.value.trim();
+  if (!text) { closeConfirm(); return; }
+
+  const res = await api('/bottle', { method: 'POST', body: { content: text } });
+  document.getElementById('confirmMask').hidden = true;
+
+  if (res.code !== 0) {
+    showToast(res.msg || '扔瓶子失败，请重试');
+    return;
+  }
+
+  createBottle(text, true);
+  closeLetter();
+  showSuccess();
+}
+
+// ===== 发送成功提示：5 秒后自动关闭 =====
+let successTimer = null;
+function showSuccess() {
+  const mask = document.getElementById('successMask');
+  mask.hidden = false;
+  clearTimeout(successTimer);
+  setTimeout(() => mask.classList.add('show'), 20);
+  successTimer = setTimeout(hideSuccess, 5000);
+}
+
+function hideSuccess() {
+  const mask = document.getElementById('successMask');
+  mask.classList.remove('show');
+  clearTimeout(successTimer);
+  successTimer = setTimeout(() => { mask.hidden = true; }, 300);
+}
+
+function resetSuccess() {
+  const mask = document.getElementById('successMask');
+  clearTimeout(successTimer);
+  mask.classList.remove('show');
+  mask.hidden = true;
+}
+
+// ===== 小提示 =====
+const toast = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 1900);
+}
+</script>
+<script>
+function safeBack(fallback) {
+  try {
+    // 从本站别的页面进来的，才有"上一页"可回
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  // 直接打开 / 刷新：兜底回指定页面
+  location.replace(fallback || 'index.html');
+}
+</script>
+<!-- weiguang 返回定死：回首页 -->
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+<!-- removeBottleBless -->
+</body>
+</html>

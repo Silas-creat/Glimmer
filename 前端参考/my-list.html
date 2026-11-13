@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f7f5f1; color: #3a3a34;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  }
+  header { display: flex; align-items: center; padding: 18px 20px 12px; flex-shrink: 0; }
+  header .back { font-size: 22px; color: #7d9b6a; cursor: pointer; padding: 0 10px; }
+  header .tt { font-size: 17px; color: #4a4a42; }
+
+  #feed { flex: 1; overflow-y: auto; padding: 4px 10px 30px; column-count: 2; column-gap: 10px; }
+  .card {
+    break-inside: avoid; margin-bottom: 10px;
+    background: #fff; border-radius: 12px; overflow: hidden; cursor: pointer;
+  }
+  .card:active { transform: scale(.98); }
+  .card .img {
+    position: relative; background-size: cover; background-position: center;
+    min-height: 140px; display: flex; align-items: flex-end;
+  }
+  .card .img::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.1) 65%);
+  }
+  .card .img .txt {
+    position: relative; z-index: 2; color: #fff;
+    font-size: 13px; line-height: 1.6; padding: 10px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .card .foot { padding: 9px 10px 10px; display: flex; align-items: center; gap: 7px; }
+  .card .foot .av { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
+  .card .foot .nick {
+    font-size: 12px; color: #8a8578; flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card .foot .like { font-size: 12px; color: #b0aa9c; }
+  .empty-tip {
+    text-align: center; color: #b8b2a4; font-size: 15px;
+    padding: 40vh 20px 0; transform: translateY(-50%);
+  }
+  /* 没有配图时：不要照片暗角，纯色卡片 + 深色字 */
+  .card .img.no-img::after { background: none; }
+  .card .img.no-img .txt { color: #55524a; text-shadow: none; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<header>
+  <div class="back" onclick="safeBack('mine.html')">‹</div>
+  <div class="tt" id="tt">我的喜欢</div>
+</header>
+
+<div id="feed"></div>
+
+<script src="api.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const type = (params.get('type') === 'favorite') ? 'favorite' : 'like';
+
+const feed = document.getElementById('feed');
+
+function esc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function fmtDay(day) { return (day || '').slice(5).replace('-', '.'); }
+
+function renderEmpty(text) {
+  feed.innerHTML = '<div class="empty-tip">' + esc(text) + '</div>';
+}
+
+async function load() {
+  if (!requireLogin()) return;
+
+  document.getElementById('tt').textContent = (type === 'like') ? '我的喜欢' : '我的收藏';
+
+  const res = await api('/interact/mine?type=' + type + '&size=30');
+  if (res.code !== 0) {
+    renderEmpty('加载失败：' + (res.msg || '请稍后再试'));
+    return;
+  }
+
+  const list = (res.data && res.data.list) || [];
+  if (!list.length) {
+    renderEmpty(type === 'like' ? '还没有喜欢过什么' : '还没有收藏过什么');
+    return;
+  }
+
+  feed.innerHTML = '';
+  list.forEach(function (d) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.onclick = function () { location.href = 'diary-public.html?id=' + d.id; };
+    const __isDemo = /\/uploads\/demo_\d+\.svg$/.test(d.cover || '');
+    const __pal = ['#e9e3d7','#dfe7dd','#e4e1ea','#eee2db','#dde6e9','#eae4d8'];
+    const bg = (d.cover && !__isDemo)
+      ? "background-image:url('" + esc(d.cover) + "')"
+      : 'background:' + __pal[(Number(d.id) || 0) % __pal.length];
+    card.innerHTML =
+      '<div class="img" style="' + bg + '"><div class="txt">' + esc(d.content) + '</div></div>' +
+      '<div class="foot">' +
+        '<span class="av-text">' + esc((d.author.nickname || '匿').slice(0, 1)) + (d.author.avatar ? '<img class="av-text-img" src="' + esc(d.author.avatar) + '" alt="" onerror="this.remove()">' : '') + '</span>' +
+        '<div class="nick">' + esc(d.author.nickname) + '</div>' +
+        '<div class="like">' + fmtDay(d.day) + ' · ♡ ' + (d.likeCount || 0) + '</div>' +
+      '</div>';
+    feed.appendChild(card);
+  });
+}
+
+load();
+</script>
+<script id="__bfcacheGuard">
+// ============================================================
+//  bfcache 兜底：从浏览器缓存里"恢复"的页面要重新拉一次数据
+//
+//  背景：删完日记 history.back() 回「我的」，浏览器直接从 bfcache
+//        把旧页面还原，脚本不重跑 → 列表里那篇已删除的日记还在。
+//        删日记那一侧改成 location.replace() 之后这条路已经绕开了，
+//        但别的返回路径（详情页返回、手机侧滑返回）同样会命中 bfcache，
+//        所以列表页自己也兜一层。
+//
+//  做法：pageshow 事件里判断 e.persisted（true = 从 bfcache 恢复）。
+//        有现成的加载函数就调它，没有就整页重载。
+// ============================================================
+(function () {
+  var LOADERS = ['loadEntries', 'loadList', 'load', 'refreshList', 'renderList'];
+
+  function reloadData() {
+    for (var i = 0; i < LOADERS.length; i++) {
+      var fn = window[LOADERS[i]];
+      if (typeof fn === 'function') {
+        try { fn(); return; } catch (e) { /* 换下一个 */ }
+      }
+    }
+    // 找不到加载函数就整页重载 —— 保证用户看到的是最新数据
+    location.reload();
+  }
+
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) reloadData();
+  });
+})();
+
+</script>
+<script>
+function safeBack(fallback) {
+  try {
+    // 从本站别的页面进来的，才有"上一页"可回
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  // 直接打开 / 刷新：兜底回指定页面
+  location.replace(fallback || 'index.html');
+}
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+<script>// 没有背景图的卡片加 no-img，去掉照片暗角（纯色卡片看起来不再像没加载出来）
+function markNoImgCards() {
+  document.querySelectorAll('.card .img').forEach(function (el) {
+    var bg = window.getComputedStyle(el).backgroundImage || 'none';
+    if (bg === 'none') el.classList.add('no-img');
+  });
+}
+markNoImgCards();
+new MutationObserver(markNoImgCards).observe(document.body, { childList: true, subtree: true });
+</script>
+</body>
+</html>

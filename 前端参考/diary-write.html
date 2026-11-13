@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>写日记</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+  #bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+  }
+  #bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(0,0,0,0.28);
+  }
+
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 22px; z-index: 3;
+  }
+  .btn-top {
+    background: rgba(255,255,255,0.85); color: #4a4a42;
+    border: none; border-radius: 20px; padding: 9px 20px;
+    font-size: 14px; cursor: pointer;
+  }
+  .btn-top:active { transform: scale(.95); }
+  .left-group { display: flex; align-items: center; gap: 8px; }
+
+  #text {
+    position: absolute; inset: 0; z-index: 2;
+    background: transparent; border: none; outline: none; resize: none;
+    padding: 100px 28px 120px;
+    color: #fff; font-size: 18px; line-height: 1.9;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+  #text::placeholder { color: rgba(255,255,255,0.7); }
+
+  #dateTag {
+    position: absolute; bottom: 24px; left: 28px; z-index: 3;
+    color: rgba(255,255,255,0.85); font-size: 13px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+
+  /* 右下角锁 */
+  #lockBtn {
+    position: absolute; bottom: 20px; right: 24px; z-index: 4;
+    font-size: 26px; cursor: pointer;
+    background: rgba(255,255,255,0.85);
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  }
+  #lockBtn:active { transform: scale(.94); }
+  #lockLabel {
+    position: absolute; bottom: 74px; right: 24px; z-index: 4;
+    font-size: 12px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    text-align: right;
+  }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<div id="bg"></div>
+
+<div class="topbar">
+  <div class="left-group">
+    <button class="btn-top" onclick="goBack()">‹ 返回</button>
+    <button class="btn-top" id="leftBtn" onclick="onLeft()">换背景</button>
+  </div>
+  <button class="btn-top" onclick="save()">保存</button>
+</div>
+
+<textarea id="text" placeholder="今天想说点什么…"></textarea>
+<div id="dateTag"></div>
+
+<div id="lockLabel">私密</div>
+<div id="lockBtn" onclick="toggleLock()">🔒</div>
+
+<script src="api.js"></script>
+<script>
+// 打不开接口就直接回登录页
+if (!requireLogin()) { /* requireLogin 内部已跳转 */ }
+
+const params = new URLSearchParams(location.search);
+const dateKey = params.get('date') || (() => {
+  const n = new Date();
+  return n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
+})();
+
+document.getElementById('dateTag').textContent = dateKey;
+
+// 背景图候选（视觉用，存在日记记录里，换设备也能还原）
+const IMGS = [
+  'assets/diary-month/01.jpg',
+  'assets/diary-month/02.jpg',
+  'assets/diary-month/03.jpg',
+  'assets/diary-month/04.jpg',
+  'assets/diary-month/05.jpg',
+  'assets/diary-month/06.jpg',
+  'assets/diary-month/07.jpg',
+  'assets/diary-month/08.jpg',
+  'assets/diary-month/09.jpg',
+  'assets/diary-month/10.jpg',
+  'assets/diary-month/11.jpg',
+  'assets/diary-month/12.jpg'
+];
+
+const bgEl = document.getElementById('bg');
+const textEl = document.getElementById('text');
+const leftBtn = document.getElementById('leftBtn');
+const lockBtn = document.getElementById('lockBtn');
+const lockLabel = document.getElementById('lockLabel');
+
+let currentImg = IMGS[Math.floor(Math.random() * IMGS.length)];
+let isPublic = false;
+let editingId = null;        // 已经有日记时，保存走“修改”
+
+bgEl.style.backgroundImage = `url('${currentImg}')`;
+updateLockUI();
+
+function toast(msg) {
+  // 简单提示：不打断输入，2 秒后消失
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.style.cssText = 'position:fixed;left:50%;bottom:110px;transform:translateX(-50%);' +
+      'background:rgba(60,60,55,.88);color:#fff;font-size:13px;padding:10px 16px;border-radius:10px;' +
+      'z-index:99;max-width:80%;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2000);
+}
+
+// 进入页面先拉这一天的日记（有就回填，没有就空着）
+(async function loadEntry() {
+  const res = await api('/diary/by-day?day=' + encodeURIComponent(dateKey));
+  if (res.code !== 0) {
+    if (res.code !== 401) toast(res.msg || '加载失败');
+    return;
+  }
+  const d = res.data;
+  if (!d) return;
+  editingId = d.id;
+  textEl.value = d.content || '';
+  isPublic = d.visibility === 'public';
+  if (d.cover) {
+    currentImg = d.cover;
+    bgEl.style.backgroundImage = `url('${currentImg}')`;
+  }
+  leftBtn.textContent = '换背景';
+  updateLockUI();
+})();
+
+function updateLockUI() {
+  if (isPublic) {
+    lockBtn.textContent = '🔓';
+    lockLabel.textContent = '公开';
+  } else {
+    lockBtn.textContent = '🔒';
+    lockLabel.textContent = '私密';
+  }
+}
+
+function toggleLock() {
+  isPublic = !isPublic;
+  updateLockUI();
+}
+
+function onLeft() {
+  if (leftBtn.textContent === '刷新') {
+    let next = currentImg;
+    while (next === currentImg && IMGS.length > 1) {
+      next = IMGS[Math.floor(Math.random() * IMGS.length)];
+    }
+    currentImg = next;
+    bgEl.style.backgroundImage = `url('${currentImg}')`;
+  } else {
+    leftBtn.textContent = '刷新';
+    loadAgain();
+  }
+}
+
+async function loadAgain() {
+  const res = await api('/diary/by-day?day=' + encodeURIComponent(dateKey));
+  if (res.code === 0 && res.data) {
+    textEl.value = res.data.content || '';
+    isPublic = res.data.visibility === 'public';
+    updateLockUI();
+  }
+}
+
+function goBack() {
+  // 从哪来回哪去：从「我的」进来就回「我的」，从日历进来就回日历。
+  //   直接打开这一页（没有上一页）时才退回日历。
+  try {
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  location.replace('diary-mine.html');
+}
+
+async function save() {
+  const text = textEl.value.trim();
+  if (!text) { toast('写点什么再保存吧'); return; }
+
+  const body = {
+    content: text,
+    visibility: isPublic ? 'public' : 'private',
+    cover: currentImg,
+    day: dateKey
+  };
+
+  const btn = document.querySelector('.topbar .btn-top:last-child');
+  if (btn) btn.disabled = true;
+
+  const res = editingId
+    ? await api('/diary/' + editingId, { method: 'PUT', body })
+    : await api('/diary', { method: 'POST', body });
+
+  if (btn) btn.disabled = false;
+
+  if (res.code !== 0) {
+    toast(res.msg || '保存失败，请重试');
+    return;
+  }
+  goBack();
+}
+
+// ===== 左上角按钮：只负责「换背景」 =====
+// 这份代码会追加到 diary-write.html 脚本末尾，
+// 同名的 onLeft 会覆盖前面的定义（JS 函数声明后定义者胜）。
+//
+// 原稿的按钮有两种状态：
+//   「修改」→ 悄悄把正文还原成已保存的版本，再变成「刷新」
+//   「刷新」→ 换背景图
+// 第一个行为会无声丢掉用户正在写的内容，所以这里去掉，只保留换背景。
+
+function onLeft() {
+  let next = currentImg;
+  while (next === currentImg && IMGS.length > 1) {
+    next = IMGS[Math.floor(Math.random() * IMGS.length)];
+  }
+  currentImg = next;
+  bgEl.style.backgroundImage = "url('" + next + "')";
+  leftBtn.textContent = '换背景';
+}
+
+
+// ===== 删除日记 =====
+// 打开一篇已经存在的日记时，顶部多出一个「删除」按钮。
+// 后端 DELETE /api/diary/:id 只有作者能调，关联的点赞/评论/收藏会被级联清掉。
+
+(function __setupDelete() {
+  const group = document.querySelector('.topbar .left-group');
+  if (!group) return;
+
+  const btn = document.createElement('button');
+  btn.id = '__delBtn';
+  btn.className = 'btn-top';
+  btn.textContent = '删除';
+  btn.style.display = 'none';
+  btn.style.color = '#c0705e';
+
+  btn.onclick = async function () {
+    if (!editingId) return;
+    if (!confirm('确定删除这篇日记吗？删了就找不回来了')) return;
+
+    btn.disabled = true;
+    const r = await api('/diary/' + editingId, { method: 'DELETE' });
+    btn.disabled = false;
+
+    if (r.code !== 0) { toast(r.msg || '删除失败'); return; }
+    toast('已删除');
+    // ★ 删除后要用「重新加载上一页」，不能用 history.back() ★
+    //
+    //   原因：浏览器有 bfcache（前进/后退缓存）。history.back() 回到「我的」时，
+    //   页面是从内存里恢复的，JS 一行都不会重跑，于是列表里那篇已经删掉的日记还在。
+    //   用户看到的就是"删了没反应，刷新一下才对"。
+    //
+    //   location.replace(上一页地址) 会真正重新请求那一页，列表自然是新的。
+    setTimeout(function () { goBackFresh(); }, 500);
+  };
+
+  group.appendChild(btn);
+
+  // 编辑已有日记时才显示：editingId 是页面加载后异步填上的，轮询等一下
+  let tries = 0;
+  const timer = setInterval(function () {
+    tries++;
+    if (editingId) {
+      btn.style.display = '';
+      clearInterval(timer);
+    } else if (tries > 20) {
+      clearInterval(timer);
+    }
+  }, 200);
+})();
+
+// ===== 删除后返回：重新加载上一页，绕开 bfcache =====
+function goBackFresh() {
+  var ref = '';
+  try { ref = document.referrer || ''; } catch (e) {}
+
+  // 只回本站的页面；而且别回自己（否则会刷新成空白编辑页）
+  if (ref && ref.indexOf(location.host) >= 0 && ref.indexOf('diary-write.html') < 0) {
+    location.replace(ref);
+    return;
+  }
+  // 没有来源（直接打开）就退回日历/我的日记
+  location.replace('diary-mine.html');
+}
+
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+</body>
+</html>

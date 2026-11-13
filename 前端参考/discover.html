@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>发现</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f7f5f1; color: #3a3a34;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  }
+  header {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px 20px 12px; flex-shrink: 0;
+  }
+  header .tt { font-size: 17px; color: #4a4a42; }
+  header .back { font-size: 22px; color: #7d9b6a; cursor: pointer; padding: 0 10px; }
+
+  /* 【修改】去掉了 max-width，让它铺满屏幕 */
+  #feed {
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 10px 20px 30px; /* 左右留一点边距，不贴边 */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-content: flex-start;
+    width: 100%; /* 铺满宽度 */
+  }
+
+  .card {
+    width: calc(50% - 8px); /* 依然是完美的两列 */
+    background: #fff; 
+    border-radius: 12px; 
+    overflow: hidden; 
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+  }
+  .card:active { transform: scale(.98); }
+  
+  /* 【关键修改】不要写死高度，用 aspect-ratio（宽高比）。 
+     这样在电脑上它就变宽变高，在手机上就自动变小，永远不会被压扁！ */
+  .card .img {
+    width: 100%;
+    aspect-ratio: 4 / 3; /* 图片比例 4:3 */
+    background-size: cover; 
+    background-position: center;
+    position: relative;
+    display: flex; 
+    align-items: flex-end;
+  }
+  .card .img::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.1) 65%);
+  }
+  .card .img .txt {
+    position: relative; z-index: 2;
+    color: #fff; font-size: 15px; line-height: 1.6;
+    padding: 16px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    white-space: pre-wrap; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card .foot { padding: 12px 14px; display: flex; align-items: center; gap: 8px; }
+  .card .foot .date { font-size: 11px; color: #b0aa9c; margin-left: auto; margin-right: 10px; }
+  .card .foot .av { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
+  .card .foot .nick {
+    font-size: 13px; color: #8a8578; flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card .foot .like { font-size: 13px; color: #b0aa9c; display: flex; align-items: center; gap: 3px; }
+
+  /* 底部导航 */
+  #tabbar { display: flex; border-top: 1px solid #e6e2da; background: #fbfaf8; flex-shrink: 0; }
+  .tab { flex: 1; text-align: center; padding: 10px 0 12px; font-size: 12px; color: #a8a294; cursor: pointer; user-select: none; }
+  .tab.on { color: #2b7fff; background: #e8f1ff; border-radius: 10px; margin: 4px; padding: 6px 0 8px; }
+  .tab .ico { font-size: 20px; display: block; margin-bottom: 2px; }
+  .refresh-btn { position: absolute; right: 18px; top: 50%;
+    transform: translateY(-50%); font-size: 13px; color: #7d9b6a;
+    cursor: pointer; padding: 4px 6px; }
+  /* 没有配图时：不要照片暗角，纯色卡片 + 深色字 */
+  .card .img.no-img::after { background: none; }
+  .card .img.no-img .txt { color: #55524a; text-shadow: none; }
+  .card .foot .cmt { margin-right: 8px; opacity: .85; }
+  /* 窄屏卡片挤：日期让位，保住昵称 */
+  @media (max-width: 560px) { .card .foot .date { display: none; } .card .foot { gap: 6px; } }
+  .card .foot .sv { margin-right: 8px; opacity: .85; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<header>
+  <div class="tt">发现</div>
+  <span class="refresh-btn" onclick="refreshFeed()">换一批</span>
+</header>
+
+<div id="feed"></div>
+
+<div id="tabbar">
+  <div class="tab" onclick="location.href='index.html?logged=1'"><span class="ico">⌂</span>首页</div>
+  <div class="tab" onclick="location.href='index.html?logged=1&tab=friend'"><span class="ico">☰</span>好友</div>
+  <div class="tab on" onclick="location.href='discover.html'"><span class="ico">◎</span>发现</div>
+  <div class="tab" onclick="location.href='diary.html'"><span class="ico">✎</span>日记</div>
+  <div class="tab" onclick="location.href='mine.html'"><span class="ico">☺</span>我的</div>
+</div>
+
+<script src="api.js"></script>
+<script>
+const feed = document.getElementById('feed');
+
+function fmtDay(day) {
+  // 和详情页保持一致：2026-10-13 → 10.13
+  return (day || '').slice(5).replace('-', '.');
+}
+
+function esc(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderEmpty(text) {
+  feed.innerHTML = '<div style="width:100%;text-align:center;color:#a8a294;font-size:13px;padding:60px 0;line-height:2;">'
+    + esc(text) + '</div>';
+}
+
+async function loadFeed() {
+  const res = await api('/diary/public?size=30&excludeMine=1');
+  if (res.code !== 0) {
+    renderEmpty(res.msg || '加载失败，请稍后重试');
+    return;
+  }
+  const list = (res.data && res.data.list) || [];
+  // 按日期倒序（最新在前），和后端排序保持一致
+  list.sort(function (a, b) { return String(b.day || '').localeCompare(String(a.day || '')); });
+  if (!list.length) {
+    renderEmpty('还没有公开的日记，去写一篇，让别人看见你。');
+    return;
+  }
+  list.forEach(function (d) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.onclick = function () {
+      // 把这一屏的顺序记下来：详情页照着排，往下刷才不会跳来跳去
+      try { sessionStorage.setItem('wx_feed_ids', JSON.stringify(list.map(function (x) { return String(x.id); }))); } catch (e) {}
+      location.href = 'diary-public.html?id=' + d.id + '&from=discover';
+    };
+    const __isDemo = /\/uploads\/demo_\d+\.svg$/.test(d.cover || '');
+    const __pal = ['#e9e3d7','#dfe7dd','#e4e1ea','#eee2db','#dde6e9','#eae4d8'];
+    const bg = (d.cover && !__isDemo)
+      ? "background-image:url('" + esc(d.cover) + "')"
+      : 'background:' + __pal[(Number(d.id) || 0) % __pal.length];
+    el.innerHTML =
+      '<div class="img" style="' + bg + '">' +
+        '<div class="txt">' + esc(d.content) + '</div>' +
+      '</div>' +
+      '<div class="foot">' +
+        '<span class="av-text">' + esc((d.author.nickname || '匿').slice(0, 1)) + (d.author.avatar ? '<img class="av-text-img" src="' + esc(d.author.avatar) + '" alt="" onerror="this.remove()">' : '') + '</span>' +
+        '<div class="nick">' + esc(d.author.nickname) + '</div>' +
+        '<div class="date">' + esc(fmtDay(d.day)) + '</div>' +
+        '<div class="like"><span class="cmt" title="评论">💬 ' + (d.comments || 0) + '</span>' + '<span class="sv" title="收藏">☆ ' + (d.saves || 0) + '</span>' + '♡ ' + (d.likes || 0) + '</div>' +
+      '</div>';
+    feed.appendChild(el);
+  });
+}
+
+loadFeed();
+
+// ===== 发现页：换一批 =====
+// 这段追加到 discover.html 脚本末尾，覆盖原来的 loadFeed。
+//
+// 原稿两个问题：
+//   1. 只按日期倒序，永远是同一批（没有"推荐"的感觉）
+//   2. loadFeed 里没有清空 #feed，调第二次会把卡片叠加一遍
+//      （之前只有一次调用所以没暴露，加了刷新按钮就会重复）
+
+// ★ 用 var 不用 let ★
+//   原稿脚本末尾有一句 loadFeed() 会比这段代码先执行，
+//   let 在声明前访问会进 TDZ 直接抛错（整页就白了），var 会被提前初始化为 undefined。
+var __discoverRandom = false;
+
+async function loadFeed() {
+  const feed = document.getElementById('feed');
+  const qs = '/diary/public?size=30&excludeMine=1' + (__discoverRandom ? '&sort=random' : '');
+
+  const res = await api(qs);
+  if (res.code !== 0) {
+    renderEmpty(res.msg || '加载失败，请稍后重试');
+    return;
+  }
+
+  const list = (res.data && res.data.list) || [];
+
+  // 非随机模式才按日期倒序；随机模式保留后端打乱的顺序
+  if (!__discoverRandom) {
+    list.sort(function (a, b) { return String(b.day || '').localeCompare(String(a.day || '')); });
+  }
+
+  feed.innerHTML = '';          // ★ 先清空，否则每次刷新都会重复叠加
+
+  if (!list.length) {
+    renderEmpty('还没有公开的日记，去写一篇，让别人看见你。');
+    return;
+  }
+
+  list.forEach(function (d) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.onclick = function () {
+      // 把这一屏的顺序记下来：详情页照着排，往下刷才不会跳来跳去
+      try { sessionStorage.setItem('wx_feed_ids', JSON.stringify(list.map(function (x) { return String(x.id); }))); } catch (e) {}
+      location.href = 'diary-public.html?id=' + d.id + '&from=discover';
+    };
+
+    const __isDemo = /\/uploads\/demo_\d+\.svg$/.test(d.cover || '');
+    const __pal = ['#e9e3d7','#dfe7dd','#e4e1ea','#eee2db','#dde6e9','#eae4d8'];
+    const bg = (d.cover && !__isDemo)
+      ? "background-image:url('" + esc(d.cover) + "')"
+      : 'background:' + __pal[(Number(d.id) || 0) % __pal.length];
+
+    el.innerHTML =
+      '<div class="img" style="' + bg + '">' +
+        '<div class="txt">' + esc(d.content) + '</div>' +
+      '</div>' +
+      '<div class="foot">' +
+        '<span class="av-text">' + esc((d.author.nickname || '匿').slice(0, 1)) + (d.author.avatar ? '<img class="av-text-img" src="' + esc(d.author.avatar) + '" alt="" onerror="this.remove()">' : '') + '</span>' +
+        '<div class="nick">' + esc(d.author.nickname) + '</div>' +
+        '<div class="date">' + esc(fmtDay(d.day)) + '</div>' +
+        '<div class="like"><span class="cmt" title="评论">💬 ' + (d.comments || 0) + '</span>' + '<span class="sv" title="收藏">☆ ' + (d.saves || 0) + '</span>' + '♡ ' + (d.likes || 0) + '</div>' +
+      '</div>';
+    feed.appendChild(el);
+  });
+}
+
+function refreshFeed() {
+  __discoverRandom = true;
+  loadFeed();
+}
+
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+<script>// 没有背景图的卡片加 no-img，去掉照片暗角（纯色卡片看起来不再像没加载出来）
+function markNoImgCards() {
+  document.querySelectorAll('.card .img').forEach(function (el) {
+    var bg = window.getComputedStyle(el).backgroundImage || 'none';
+    if (bg === 'none') el.classList.add('no-img');
+  });
+}
+markNoImgCards();
+new MutationObserver(markNoImgCards).observe(document.body, { childList: true, subtree: true });
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "peizhe-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "「陪着」后端服务 - Node.js + Express + MySQL",
+  "type": "module",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "initdb": "node scripts/init-db.js",
+    "check": "node scripts/smoke-test.js",
+    "test": "node scripts/smoke-test.js",
+    "test:competition": "node --test scripts/test-ai-session.test.js scripts/test-chat-session.test.js scripts/test-crisis-policy.test.js && node scripts/test-companion.test.js && node scripts/test-moderation.js && node scripts/test-chatbot.js",
+    "test:merge24": "node --test scripts/test-merge24-moderation.test.js scripts/test-message-links.test.js scripts/test-merge24-frontend.test.js && node scripts/test-merge24-social.test.js && node scripts/test-merge24-mute.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.11.5",
+    "qrcode": "^1.5.4"
+  }
+}

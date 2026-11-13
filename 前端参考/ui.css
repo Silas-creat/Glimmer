@@ -1,0 +1,139 @@
+/* ==========================================================
+   ui.css —— 全局小修补
+   目的：修掉“页面右侧被切”“第五个导航标签挤出屏幕”“头像裂图”
+   规则放在最后加载，用来兜住各处的小溢出，不改动原有设计
+   ========================================================== */
+
+/* 1. 页面不许横向溢出（很多页面比屏幕宽十几像素，导致右侧被切） */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* 2. 底部导航：五个标签平分宽度，选中的那个不再用 margin 把自己挤出去 */
+#tabbar {
+  width: 100%;
+  box-sizing: border-box;
+}
+#tabbar .tab {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 20%;      /* 五个标签固定各占 1/5，任何宽度下都不会被挤出屏幕 */
+  box-sizing: border-box;
+}
+#tabbar .tab.on {
+  margin: 0;
+  border-radius: 0;
+  padding: 10px 0 12px;
+}
+
+/* 3. 漂流瓶底部悬浮条：居中且不超宽 */
+#bottom {
+  box-sizing: border-box;
+}
+
+/* 4. 图片永远不超过容器 */
+img {
+  max-width: 100%;
+}
+
+/* 6. 桌面端（宽度 >= 820px）：内容居中成一列，不把手机版拉成一张大饼 */
+@media (min-width: 820px) {
+  html {
+    background: #e9e5dd;
+  }
+  body {
+    max-width: 960px;
+    margin: 0 auto;
+    box-shadow: 0 0 60px rgba(80, 70, 55, 0.10);
+  }
+  /* 沉浸式页面（漂流瓶、聊天）窄一点，看起来像一块竖屏 */
+  body:not(:has(#tabbar)) {
+    max-width: 720px;
+  }
+  /* 底部导航按“内容栏”定位，不要撑满整个浏览器窗口
+     （日记页的 #tabbar 是 position:absolute，body 没有定位时会以窗口为基准） */
+  body:has(#tabbar) {
+    position: relative;
+  }
+  #tabbar {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 有底部导航的页面：发现页排三列，别拉成两张巨图 */
+  body:has(#tabbar) #feed {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+  body:has(#tabbar) .card {
+    width: calc(33.333% - 11px);
+  }
+  /* 底部导航在高分屏上稍微收一点 */
+  #tabbar .tab {
+    padding-top: 12px;
+    padding-bottom: 14px;
+  }
+}
+
+/* 5. 头像：用首字母小圆点代替外链头像，断网也不裂图 */
+.av-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e3ecdb;
+  color: #5f7a4f;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.p-avatar.av-text {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+}
+
+/* ===== 头像统一蓝色底（有上传图就显示图，没有就用昵称首字） ===== */
+.av-text,
+.gav,
+.irow .ia,
+.card .foot .av-text {
+  background: #dbe7f8 !important;
+  color: #3f6ea8 !important;
+}
+.profile .avatar,
+.flist .avatar {
+  background: #dbe7f8 !important;
+  color: #3f6ea8 !important;
+}
+
+
+/* ===== 底部导航（所有宽度）固定在窗口底部 ===== */
+body:has(#tabbar) {
+  padding-bottom: 68px !important;
+  box-sizing: border-box;
+}
+#tabbar {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100% !important;
+  max-width: 960px;
+  margin: 0 auto;
+  z-index: 50;
+  box-shadow: 0 -6px 20px rgba(80, 70, 55, 0.06);
+  background: #fbfaf8;
+}
+@media (min-width: 820px) {
+  #tabbar { width: 960px !important; left: 50%; right: auto; transform: translateX(-50%); }
+}
+
+/* ===== 头像：首字垫底，有上传的图就盖上去（图挂了会自动去掉） =====
+   这一段是最终版修的 bug：卡片/群聊头像只显示昵称首字，
+   有真实头像时图片要压在上面；图片 404 时 onerror 会移除 img，
+   露出底下的首字，而不是留一个裂图占位。 */
+.av-text { position: relative; overflow: hidden; }
+.av-text-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>聊天</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f3ef;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: #fbfaf8;
+    border-bottom: 1px solid #e6e2da;
+    flex-shrink: 0;
+  }
+  .back {
+    font-size: 22px;
+    color: #7d9b6a;
+    cursor: pointer;
+    padding: 0 6px;
+    line-height: 1;
+  }
+  .avatar {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #d8e4d0;
+    overflow: hidden;
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #7d9b6a;
+  }
+  .avatar .fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .avatar img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .who { flex: 1; min-width: 0; }
+  .name {
+    font-size: 15px;
+    color: #4a4a42;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sub {
+    font-size: 11px;
+    color: #b0aa9c;
+    margin-top: 2px;
+  }
+
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .ta {
+    align-self: flex-start;
+    background: #ffffff;
+    color: #3a3a34;
+    border-bottom-left-radius: 4px;
+  }
+  .me {
+    align-self: flex-end;
+    background: #d8e4d0;
+    color: #3a3a34;
+    border-bottom-right-radius: 4px;
+  }
+
+  footer {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: #f5f3ef;
+    flex-shrink: 0;
+  }
+  #input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 12px 16px;
+    border-radius: 22px;
+    font-size: 15px;
+    background: #ffffff;
+    color: #3a3a34;
+    font-family: inherit;
+  }
+  #sendBtn {
+    border: none;
+    background: #a8b89c;
+    color: #fff;
+    padding: 0 20px;
+    border-radius: 22px;
+    font-size: 15px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  #sendBtn:active { transform: scale(.97); }
+  /* 聊天时间分隔（微信那种居中小灰字） */
+  .gtime, .msg-time {
+    align-self: center; color: #a8a294; font-size: 11px;
+    padding: 2px 8px; letter-spacing: .3px;
+  }
+  /* 私信里的跳转按钮（@ 提及、送祝福） */
+  .msg .msg-link {
+    display: inline-block; margin-top: 8px; padding: 6px 12px;
+    border-radius: 12px; background: rgba(255,255,255,.75);
+    color: #5f7a4f; font-size: 12px; text-decoration: none;
+    border: 1px solid rgba(95,122,79,.25);
+  }
+  .msg.me .msg-link { background: rgba(255,255,255,.55); }
+  /* 机器人的关怀卡片 */
+  .care-card {
+    align-self: center; max-width: 88%; background: #fff; border-radius: 12px;
+    padding: 12px 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    font-size: 12px; color: #6b6459; line-height: 1.7;
+  }
+  .care-card .cc-title { color: #4a4a42; margin-bottom: 6px; }
+  .care-card .cc-line { color: #8a8578; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<header>
+  <div class="back" onclick="goBackChat()">‹</div>
+  <div class="avatar" id="avatar" onclick="openProfile()" title="查看 ta 的主页">
+    <span class="fallback" id="avatarFallback">·</span>
+    <img id="avatarImg" alt="" onerror="this.style.display='none'">
+  </div>
+  <div class="who">
+    <div class="name" id="name">ta</div>
+    <div class="sub" id="sub">愿意听你说</div>
+  </div>
+</header>
+
+<div id="chat"></div>
+
+<footer>
+  <input id="input" placeholder="说点什么…" autocomplete="off" />
+  <button id="sendBtn" onclick="send()">说</button>
+</footer>
+
+<script src="api.js"></script>
+<script src="message-links.js"></script>
+<script>
+// ===== 私信：接后端 /api/message =====
+//   ?userId=12           直接指定和谁聊
+//   ?id=<日记id>         从日记详情点过来（用这篇日记的作者）
+//
+//   ★ 页面结构（头像、头部、气泡）都是十九稿原来的，这里只负责喂数据 ★
+const params = new URLSearchParams(location.search);
+const userIdParam = Number(params.get('userId')) || 0;
+const diaryId = params.get('id') || '';
+
+const chatEl = document.getElementById('chat');
+const inputEl = document.getElementById('input');
+
+let partnerId = 0;
+let lastMsgId = 0;
+let pollTimer = null;
+
+function esc(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// 头部：昵称 + 头像（有图用图，没图用昵称首字）
+function setHeader(p) {
+  if (!p) return;
+  const nick = p.nick || 'ta';
+  document.getElementById('name').textContent = nick;
+  document.getElementById('sub').textContent = p.signature
+    ? p.signature
+    : (p.province ? 'IP：' + p.province : '愿意听你说');
+  document.getElementById('avatarFallback').textContent = nick.charAt(0) || '·';
+
+  const img = document.getElementById('avatarImg');
+  if (p.avatar) {
+    img.src = p.avatar;
+    img.style.display = '';
+  } else {
+    img.style.display = 'none';
+  }
+}
+
+// ===== 点头像看主页（私聊）=====
+//  顶部那个头像就是聊天对象，点一下进 ta 的主页。
+//  partnerId 是异步拿到的，所以等它出现再绑。
+(function headerToProfile() {
+  var img = document.getElementById('avatarImg');
+  if (!img) return;
+
+  var tries = 0;
+  var timer = setInterval(function () {
+    if (partnerId) {
+      var box = img.parentElement || img;
+      box.style.cursor = 'pointer';
+      box.title = '看 ta 的主页';
+      box.onclick = function () {
+        location.href = 'diary-public.html?profileUserId=' + encodeURIComponent(partnerId);
+      };
+      clearInterval(timer);
+      return;
+    }
+    if (++tries > 40) clearInterval(timer);
+  }, 250);
+})();
+
+// 一条消息气泡
+// 时间文案：今天只显示时分，昨天加"昨天"，更早显示日期
+function __fmtMsgTime(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  if (d.toDateString() === now.toDateString()) return hm;
+  const y = new Date(now.getTime() - 86400000);
+  if (d.toDateString() === y.toDateString()) return '昨天 ' + hm;
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + hm;
+}
+
+// 消息之间超过 5 分钟就插一条居中时间（微信那种）
+function __maybeTimeLabel(createdAt) {
+  const ts = createdAt ? Date.parse(String(createdAt).replace(' ', 'T')) : 0;
+  if (!ts) return 0;
+  const last = chatEl.lastElementChild;
+  const lastTs = last && last.dataset ? Number(last.dataset.ts || 0) : 0;
+  if (!lastTs || ts - lastTs > 5 * 60 * 1000) {
+    const t = document.createElement('div');
+    t.className = 'msg-time msgTimeLabel';
+    t.textContent = __fmtMsgTime(ts);
+    chatEl.appendChild(t);
+  }
+  return ts;
+}
+
+// 私信正文里如果带 "[跳转] xxx"，后半截渲染成一个可点的按钮
+//   约定见后端 utils/dm.js：@ 提及、送祝福都这么发。
+function __renderMsgContent(el, raw) {
+  var parsed = parseMessageLink(raw);
+  if (!parsed.href) { el.textContent = parsed.text; return; }
+
+  el.textContent = '';
+  var span = document.createElement('div');
+  span.textContent = parsed.text;
+  el.appendChild(span);
+
+  var a = document.createElement('a');
+  a.className = 'msg-link';
+  a.textContent = parsed.label;
+  a.href = parsed.href;
+  a.onclick = function (e) {
+    e.stopPropagation();
+  };
+  el.appendChild(a);
+}
+
+// 机器人提示：灰色居中的系统条（只在本地显示，不进对方的会话）
+function __botLine(text) {
+  var d = document.createElement('div');
+  d.className = 'msg sys-line __botLine';
+  d.textContent = '🤖 ' + text;
+  chatEl.appendChild(d);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+// 危机关怀卡片：热线 + 一句不评判的话（同样只给本人看）
+function __careCard(care) {
+  if (!care) return;
+  var d = document.createElement('div');
+  d.className = 'care-card';
+  var title = document.createElement('div');
+  title.className = 'cc-title';
+  title.textContent = care.message || '你愿意说出来，已经很难得了。';
+  d.appendChild(title);
+  (Array.isArray(care.lines) ? care.lines : []).forEach(function (l) {
+    var row = document.createElement('a');
+    row.className = 'cc-line';
+    row.textContent = l.name + '：' + l.phone;
+    row.href = 'tel:' + String(l.phone || '').replace(/[^\d+()-]/g, '');
+    row.style.display = 'block';
+    d.appendChild(row);
+  });
+  chatEl.appendChild(d);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+
+// ============================================================
+//  长按消息 → 举报
+//
+//  聊天里没有"每条的按钮"（会把气泡挤满），所以用长按：
+//  按住 0.6 秒弹举报面板，和日记/评论用的是同一套理由和接口。
+// ============================================================
+var __REPORT_REASONS = [
+  { v: '广告引流', t: '广告 / 留联系方式' },
+  { v: '诈骗', t: '诈骗 / 刷单 / 网贷' },
+  { v: '辱骂攻击', t: '辱骂、人身攻击' },
+  { v: '违法违规', t: '违法违规内容' },
+  { v: '不适合这里', t: '不适合出现在这个社区' },
+  { v: '其他', t: '其他（补充说明）' },
+];
+
+function __tip(msg) {
+  var t = document.getElementById('toast');
+  if (t) {
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  } else {
+    alert(msg);
+  }
+}
+
+function __bindLongPress(el, m) {
+  var timer = null;
+  var moved = false;
+
+  function start() {
+    moved = false;
+    timer = setTimeout(function () {
+      if (moved) return;
+      __reportMessage(m.id, m.fromNick || '对方');
+    }, 600);
+  }
+  function cancel() {
+    if (timer) { clearTimeout(timer); timer = null; }
+  }
+
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchmove', function () { moved = true; cancel(); }, { passive: true });
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+  el.addEventListener('contextmenu', function (e) {
+    e.preventDefault();   // 手机上长按会弹系统菜单，挡掉
+  });
+}
+
+function __reportMessage(messageId, nick) {
+  if (!messageId) return;
+  var old = document.getElementById('__dmReportMask');
+  if (old) old.remove();
+
+  var mask = document.createElement('div');
+  mask.id = '__dmReportMask';
+  mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;'
+    + 'display:flex;align-items:flex-end;justify-content:center;';
+  mask.innerHTML =
+    '<div style="width:100%;max-width:520px;background:#fbfaf8;border-radius:18px 18px 0 0;padding:18px 18px 22px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+    + '<b style="font-size:16px;color:#4a4a42;">举报这条私信</b>'
+    + '<span style="color:#a8a294;font-size:13px;cursor:pointer;" data-close>取消</span>'
+    + '</div>'
+    + '<div style="font-size:12px;color:#b0aa9c;margin-bottom:14px;">举报会提交给管理员，对方不会知道是谁举报的</div>'
+    + __REPORT_REASONS.map(function (r) {
+        return '<div data-reason="' + r.v + '" style="padding:13px 14px;margin-bottom:8px;background:#f3f0ea;'
+          + 'border-radius:12px;font-size:14px;color:#4a4a42;cursor:pointer;">' + r.t + '</div>';
+      }).join('')
+    + '</div>';
+
+  document.body.appendChild(mask);
+
+  mask.addEventListener('click', async function (e) {
+    if (e.target === mask || e.target.hasAttribute('data-close')) { mask.remove(); return; }
+    var cell = e.target.closest('[data-reason]');
+    if (!cell) return;
+
+    mask.innerHTML = '<div style="width:100%;max-width:520px;background:#fbfaf8;border-radius:18px 18px 0 0;'
+      + 'padding:34px 18px;text-align:center;color:#8a8578;font-size:14px;">正在提交…</div>';
+
+    var r = await api('/report', {
+      method: 'POST',
+      body: { targetType: 'message', targetId: Number(messageId), reason: cell.getAttribute('data-reason') },
+    });
+    mask.remove();
+    __tip(r.code === 0 ? '已提交，我们会尽快处理' : (r.msg || '提交失败'));
+  });
+}
+
+function addBubble(m) {
+  const empty = chatEl.querySelector('[data-empty]');
+  if (empty) empty.remove();
+
+  const div = document.createElement('div');
+
+  // 系统提示（加好友后的问候）：灰色居中，不带头像、不当气泡
+  if (m.isSys) {
+    div.className = 'msg sys-line';
+    div.textContent = m.content;
+    div.style.cssText = 'align-self:center;background:transparent;color:#a8a294;font-size:12px;'
+      + 'padding:6px 10px;max-width:82%;text-align:center;line-height:1.6;';
+    chatEl.appendChild(div);
+    if (m.id && Number(m.id) > lastMsgId) lastMsgId = Number(m.id);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    return div;
+  }
+
+  // 时间分隔：超过 5 分钟插一条居中时间
+  const __ts = __maybeTimeLabel(m.createdAt);
+
+  div.className = 'msg ' + (m.isMine ? 'me' : 'ta');
+  if (m.blocked) {
+    div.className = 'msg sys-line';
+    div.textContent = '这条消息未发送给对方';
+  } else __renderMsgContent(div, m.content);
+  if (__ts) div.dataset.ts = String(__ts);
+  chatEl.appendChild(div);
+
+  // ★ 长按对方的消息 → 举报 ★
+  //   自己的消息不给举报入口（后端也会拦），系统提示也不算。
+  if (!m.isMine && m.id) __bindLongPress(div, m);
+
+  if (m.id && Number(m.id) > lastMsgId) lastMsgId = Number(m.id);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return div;
+}
+
+function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+async function pullNew() {
+  const r = await api('/message/with/' + partnerId + '?after=' + lastMsgId);
+  if (r.code !== 0) return;
+  const list = (r.data && r.data.list) || [];
+  list.forEach(addBubble);
+}
+
+function startPoll() {
+  stopPoll();
+  pollTimer = setInterval(function () {
+    if (document.hidden) return;                       // 页面在后台就不刷
+    if (!localStorage.getItem('wg_token')) return;
+    pullNew();
+  }, 3000);
+}
+
+// 从日记 id 反查作者
+async function resolvePartnerId() {
+  if (userIdParam) return userIdParam;
+  if (!diaryId) return 0;
+  const r = await api('/diary/' + encodeURIComponent(diaryId));
+  if (r.code !== 0 || !r.data) return 0;
+  const d = r.data.diary || r.data;
+  return (d.author && d.author.id) || d.userId || 0;
+}
+
+async function boot() {
+  partnerId = await resolvePartnerId();
+  if (!partnerId) {
+    chatEl.innerHTML = '<div class="msg ta" data-empty>找不到这个人，回首页再点一次吧</div>';
+    return;
+  }
+
+  // 打开会话，顺便拿对方的昵称和头像
+  const open = await api('/message/open', { method: 'POST', body: { userId: partnerId } });
+  if (open.code === 0 && open.data && open.data.partner) setHeader(open.data.partner);
+
+  const r = await api('/message/with/' + partnerId + '?limit=30');
+  if (r.code !== 0) {
+    chatEl.innerHTML = '<div class="msg ta" data-empty>' + esc(r.msg || '加载失败') + '</div>';
+    return;
+  }
+
+  if (r.data && r.data.partner) setHeader(r.data.partner);
+
+  const list = (r.data && r.data.list) || [];
+  if (list.length) {
+    list.forEach(addBubble);
+  } else {
+    const stale = r.data && r.data.partner && r.data.partner.nick;
+    chatEl.innerHTML = '<div class="msg ta" data-empty>'
+      + (stale ? '还没有聊过，先跟 ' + esc(stale) + ' 打个招呼吧' : '还没有聊过，先打个招呼吧')
+      + '</div>';
+  }
+
+  startPoll();   // 对方回消息会自动出现
+}
+
+async function send() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  if (!partnerId) return;
+
+  inputEl.value = '';
+  inputEl.focus();
+
+  const r = await api('/message/send', {
+    method: 'POST',
+    body: { toUserId: partnerId, content: text },
+  });
+
+  // 关怀与是否发送成功是独立状态；错误和 blocked 响应也可能携带 care。
+  if (r.data && r.data.care) __careCard(r.data.care);
+
+  if (r.code !== 0) {
+    inputEl.value = text;                 // 发失败就把内容还回去
+    alert(r.msg || '发送失败');
+    return;
+  }
+
+  // 被机器人拦下：在聊天里插一条灰色系统提示（不发给对方）
+  if (r.data && r.data.blocked) {
+    __botLine(r.data.botNotice || r.msg || '这句话不太合适，没有发出去');
+    return;
+  }
+
+  if (r.data && r.data.message) addBubble(r.data.message);
+
+}
+
+// 点头像看 ta 主页（从日记点进来的才有日记 id）
+function openProfile() {
+  if (!diaryId) return;
+  location.href = 'diary-public.html?id=' + encodeURIComponent(diaryId)
+    + '&profile=1&from=chat';
+}
+
+document.getElementById('sendBtn').addEventListener('click', send);
+inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
+inputEl.focus();
+
+boot();
+
+// 返回：从哪来回哪去（从日记点「发私信」进来就回日记，别再写死回首页）
+function goBackChat() {
+  try {
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  location.href = 'index.html';
+}
+
+</script>
+<script>
+// ===== 分享日记卡片 =====
+// 消息正文形如【分享日记#172】摘要…，识别出来渲染成可点的卡片。
+// （转发时 diary-public 会把日记 id 带在正文开头）
+
+const __shareCard = true;
+const __origAddBubble = addBubble;
+
+addBubble = function (m) {
+  if (m.blocked) return __origAddBubble(m);
+  const mm = /^【分享日记#(\d+)】([\s\S]*)$/.exec(m.content || '');
+  if (!mm) return __origAddBubble(m);
+
+  // 标记吃掉，只留摘要当正文
+  const div = __origAddBubble({ ...m, content: (mm[2] || '转发了一篇日记').trim() });
+
+  const card = document.createElement('div');
+  card.style.cssText = [
+    'margin-top:8px',
+    'padding:10px 12px',
+    'border-radius:10px',
+    'background:rgba(255,255,255,.75)',
+    'display:flex',
+    'align-items:center',
+    'gap:8px',
+    'cursor:pointer',
+    'font-size:13px',
+    'color:#5f7a4f',
+  ].join(';');
+  card.innerHTML = '<span>📔</span><span style="flex:1">查看这篇日记</span><span>›</span>';
+  card.onclick = function (e) {
+    e.stopPropagation();
+    location.href = 'diary-public.html?id=' + mm[1];
+  };
+  div.appendChild(card);
+  return div;
+};
+
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+</body>
+</html>

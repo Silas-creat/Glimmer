@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微光同行</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f3ef; color: #3a3a34;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  #pages { flex: 1; overflow: hidden; position: relative; }
+  .page { position: absolute; inset: 0; overflow-y: auto; padding: 16px; display: none; }
+  .page.active { display: block; }
+  #page-home.active { display: flex; flex-direction: column; }
+
+  #tabbar {
+    display: flex; border-top: 1px solid #e6e2da; background: #fbfaf8;
+    padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0;
+  }
+  .tab { flex: 1; text-align: center; padding: 10px 0 12px; font-size: 12px; color: #a8a294; cursor: pointer; user-select: none; }
+  .tab.on { color: #2b7fff; background: #e8f1ff; border-radius: 10px; margin: 4px; padding: 6px 0 8px; }
+  .tab .ico { font-size: 20px; display: block; margin-bottom: 2px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.5fr 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
+  .cell { background: #ffffff; border-radius: 16px; padding: 20px 16px; cursor: pointer; transition: transform .12s; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; }
+  .cell:active { transform: scale(.97); }
+  .cell .t { font-size: 17px; color: #4a4a42; letter-spacing: 1px; }
+  .cell .s { font-size: 12px; color: #aaa495; margin-top: 8px; }
+  .cell { position: relative; }
+  .badge { position: absolute; top: 10px; right: 12px; min-width: 18px; height: 18px;
+           border-radius: 9px; background: #e0705e; color: #fff; font-size: 11px;
+           line-height: 18px; text-align: center; padding: 0 5px; }
+  .gmsg.other { align-self: flex-start; background: #ffffff; border-bottom-left-radius: 4px; }
+  .gmsg .who { font-size: 11px; color: #b0aa9c; margin-bottom: 3px; }
+  .cell.wide { grid-column: 1 / -1; background: #eef3e9; }
+  .cell.wide .t { font-size: 24px; letter-spacing: 4px; color: #6b8a58; }
+
+  .ptitle { font-size: 18px; color: #5a5a50; margin-bottom: 16px; }
+  .interact { background: #ffffff; border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; }
+  .interact .ih { font-size: 13px; color: #a8a294; margin-bottom: 12px; }
+  .interact .row { display: flex; gap: 18px; }
+  .interact .item { flex: 1; text-align: center; }
+  .interact .item .n { font-size: 18px; }
+  .interact .item .l { font-size: 12px; color: #8a8578; margin-top: 4px; }
+  .interact.single {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 18px 16px;
+  }
+  .interact.single .n { font-size: 22px; line-height: 1; }
+  .interact.single .l { font-size: 13px; color: #8a8578; margin-top: 7px; }
+
+  /* 互动消息列表 */
+  .ibox { background: #fff; border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; }
+  .ibox .ih { font-size: 13px; color: #a8a294; margin-bottom: 10px; display: flex; align-items: center; }
+  .ibox .ih .dot { margin-left: 8px; background: #e28b78; color: #fff; font-size: 10px;
+    border-radius: 9px; padding: 1px 6px; line-height: 15px; }
+  .ilist { display: flex; flex-direction: column; gap: 2px; }
+  .irow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f6f3ee; cursor: pointer; }
+  .irow:last-child { border-bottom: none; }
+  .irow .ia { width: 30px; height: 30px; border-radius: 50%; background: #eef3e8; color: #5f7a4f;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; overflow: hidden; }
+  .irow .ia img { width: 100%; height: 100%; object-fit: cover; }
+  .irow .it { flex: 1; min-width: 0; }
+  .irow .it .t1 { font-size: 13.5px; color: #4a4a42; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .irow .it .t2 { font-size: 11.5px; color: #b0aa9c; margin-top: 2px; }
+  .irow .tm { font-size: 11px; color: #c0bab0; flex-shrink: 0; }
+  .iempty { font-size: 13px; color: #b0aa9c; padding: 14px 0; text-align: center; }
+
+  .flist { background: #ffffff; border-radius: 14px; overflow: hidden; }
+  .fitem { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f2efe9; cursor: pointer; }
+  .fitem:last-child { border-bottom: none; }
+  .fitem:active { background: #f8f6f2; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; background: #d8e4d0; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; position: relative; overflow: hidden; }
+  .avatar .avatar-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #7d9b6a; }
+  .avatar img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .fitem .name { font-size: 15px; color: #4a4a42; }
+  .fitem .desc { font-size: 12px; color: #b0aa9c; margin-top: 3px; }
+  #recentDmList .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pin { font-size: 11px; color: #b58a3a; background: #faf3e3; padding: 2px 7px; border-radius: 8px; margin-left: auto; }
+  .friend-sec { font-size: 13px; color: #a8a294; margin: 18px 4px 10px; }
+
+  #groupPage { padding: 0; }
+  #groupPage.active { display: flex; flex-direction: column; }
+  .ghead { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #e6e2da; background: #fbfaf8; flex-shrink: 0; }
+  .ghead .back { font-size: 22px; color: #7d9b6a; cursor: pointer; padding-right: 6px; line-height: 1; }
+  .ghead .gt { font-size: 15px; color: #4a4a42; }
+  #gchat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .grow { display: flex; align-items: flex-start; gap: 8px; max-width: 86%; }
+.grow.me { align-self: flex-end; flex-direction: row-reverse; }
+.gav {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #e3ecdb; color: #5f7a4f; font-size: 14px; overflow: hidden;
+}
+.gav img { width: 100%; height: 100%; object-fit: cover; }
+  .gav { position: relative; }
+  .gav .gav-txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .gav img { position: relative; z-index: 1; }
+.gmsg { max-width: 100%; padding: 10px 14px; border-radius: 14px; font-size: 15px; line-height: 1.6; word-break: break-word; }
+  .gmsg.me { align-self: flex-end; background: #d8e4d0; border-bottom-right-radius: 4px; }
+  .gmsg.sys { align-self: center; background: #f0ede7; color: #a8a294; font-size: 12px; padding: 6px 12px; border-radius: 10px; }
+  .group-care { padding: 14px; border-radius: 12px; background: #eef3e8; color: #526b45; font-size: 13px; line-height: 1.7; }
+  .group-care a { display: block; color: #526b45; margin-top: 5px; }
+  .gfoot { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid #e6e2da; background: #fbfaf8; flex-shrink: 0; }
+  .gfoot input { flex: 1; border: none; outline: none; padding: 11px 16px; border-radius: 20px; font-size: 15px; background: #fff; color: #3a3a34; }
+  .gfoot button { border: none; background: #a8b89c; color: #fff; padding: 0 20px; border-radius: 20px; font-size: 15px; cursor: pointer; }
+
+  .empty { text-align: center; color: #b8b2a4; font-size: 14px; margin-top: 40vh; transform: translateY(-50%); }
+
+  #loginLayer {
+    position: fixed; inset: 0; z-index: 999;
+    background: #f7f5f1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 0 36px;
+  }
+  #loginLayer.hide { display: none; }
+  #loginLayer .logo { font-size: 30px; letter-spacing: 8px; color: #6b8a58; margin-bottom: 12px; }
+  #loginLayer .slogan { font-size: 13px; color: #b0aa9c; letter-spacing: 1px; margin-bottom: 60px; }
+  #loginLayer .field { width: 100%; max-width: 340px; display: flex; align-items: center; background: #fff; border-radius: 12px; padding: 0 16px; margin-bottom: 14px; height: 50px; }
+  #loginLayer .field input { flex: 1; border: none; outline: none; font-size: 15px; color: #3a3a34; background: transparent; }
+  #loginLayer .field input::placeholder { color: #c0bab0; }
+  #loginLayer .field .code-btn { font-size: 13px; color: #7d9b6a; cursor: pointer; padding-left: 10px; border-left: 1px solid #eee; margin-left: 8px; }
+  #loginLayer #loginBtn { width: 100%; max-width: 340px; height: 50px; margin-top: 10px; border: none; border-radius: 12px; background: #a8b89c; color: #fff; font-size: 16px; cursor: pointer; }
+  #loginLayer #adminBtn { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; font-size: 13px; color: #c0bab0; cursor: pointer; }
+
+  #toast { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.9); z-index: 9999; background: rgba(50,50,50,0.92); color: #fff; font-size: 15px; padding: 16px 28px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .fitem .dm-btn { flex-shrink: 0; padding: 6px 12px; border-radius: 14px;
+    background: #eef3ea; color: #5f7a4f; font-size: 13px; cursor: pointer; }
+  /* 聊天时间分隔（微信那种居中小灰字） */
+  .gtime, .msg-time {
+    align-self: center; color: #a8a294; font-size: 11px;
+    padding: 2px 8px; letter-spacing: .3px;
+  }
+  /* 好友页头部：左边标题，右边粉丝入口 */
+  .friend-head { display: flex; align-items: center; justify-content: space-between; }
+  .friend-head .fan-entry {
+    font-size: 13px; color: #7d9b6a; cursor: pointer;
+    padding: 4px 10px; border-radius: 12px; background: #eef3e8;
+  }
+  .friend-head .fan-entry b { font-weight: 600; }
+  .fsec-sub { font-size: 12px; color: #b0aa9c; margin: 14px 4px 8px; }
+  /* 好友行右侧的私信未读小圆点 */
+  .fitem .dm-dot {
+    margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 9px; background: #e2705a; color: #fff;
+    font-size: 11px; line-height: 18px; text-align: center; flex-shrink: 0;
+  }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div id="loginLayer">
+  <div class="logo">微光同行</div>
+  <div class="slogan">这里没人催你</div>
+  <div class="field">
+    <input id="phone" type="tel" placeholder="请输入你的电话号码" maxlength="11" />
+  </div>
+  <div class="field">
+    <input id="code" type="tel" placeholder="请输入验证码" maxlength="6" />
+    <div class="code-btn" onclick="sendCode()">发送验证码</div>
+  </div>
+  <button id="loginBtn" onclick="doLogin()">登录</button>
+  <div id="adminBtn" onclick="enterApp()">进入应用（体验版）</div>
+</div>
+
+<div id="pages">
+  <div class="page active" id="page-home">
+    <div class="grid">
+      <div class="cell wide" onclick="location.href='weiguang.html'"><div class="t">微光同行</div></div>
+      <div class="cell" onclick="openGroup('age','同龄群')"><span class="badge" id="badge-age" style="display:none"></span><div class="t">同龄群</div><div class="s">差不多年纪的人</div></div>
+      <div class="cell" onclick="openGroup('interest','拾趣')"><span class="badge" id="badge-interest" style="display:none"></span><div class="t">拾趣</div><div class="s">喜欢同个东西的人</div></div>
+      <div class="cell" onclick="openGroup('province','同省群')"><span class="badge" id="badge-province" style="display:none"></span><div class="t">同省群</div><div class="s">离得近的人</div></div>
+      <div class="cell" onclick="openGroup('zodiac','星迹')"><span class="badge" id="badge-zodiac" style="display:none"></span><div class="t">星迹</div><div class="s">同一个星座的人</div></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-friend">
+    <div class="ptitle">消息</div>
+    <div class="ibox">
+      <div class="ih">互动消息<span class="dot" id="interactDot" hidden>0</span></div>
+      <div class="ilist" id="interactList"><div class="iempty">加载中…</div></div>
+    </div>
+    <div class="flist">
+      <div class="fitem" onclick="location.href='chat.html'">
+        <div class="avatar">☺</div>
+        <div><div class="name">智能机器人</div><div class="desc">我在这儿，你说</div></div>
+        <div class="pin">置顶</div>
+      </div>
+    </div>
+
+    <div class="friend-sec friend-head">
+      <span id="friendSecTitle">好友</span>
+      <span class="fan-entry" id="fanEntry">粉丝 <b id="fanCount">0</b> ›</span>
+    </div>
+    <div class="flist" id="followedList"></div>
+    <div id="recentDmSection" hidden>
+      <div class="friend-sec">其他私信</div>
+      <div class="flist" id="recentDmList"></div>
+    </div>
+  </div>
+
+  
+  
+  
+  <div class="page" id="groupPage">
+    <div class="ghead"><div class="back" onclick="closeGroup()">‹</div><div class="gt" id="groupTitle">群</div></div>
+    <div id="gchat"><div class="gmsg sys">这里是群聊，先随便说两句吧</div></div>
+    <div class="gfoot"><input id="ginput" placeholder="说点什么…" /><button onclick="sendGroup()">说</button></div>
+  </div>
+</div>
+
+<div id="tabbar">
+  <div class="tab on" data-page="page-home" onclick="switchTab(this)"><span class="ico">⌂</span>首页</div>
+  <div class="tab" data-page="page-friend" onclick="switchTab(this)"><span class="ico">☰</span>好友</div>
+  <div class="tab" onclick="location.href='discover.html'"><span class="ico">◎</span>发现</div>
+  <div class="tab" onclick="location.href='diary.html'"><span class="ico">✎</span>日记</div>
+  <div class="tab" onclick="location.href='mine.html'"><span class="ico">☺</span>我的</div>
+</div>
+
+
+<script src="api.js"></script>
+<script>
+// 登录状态统一记录在当前标签页里：只要进过一次 App，
+// 之后在「发现 / 日记 / 我的」之间来回跳转，就不会再反复弹登录页了。
+const LOGGED_KEY = 'peizhe_logged_in';
+
+function isLoggedIn() {
+  try {
+    if (sessionStorage.getItem(LOGGED_KEY) === '1') return true;
+  } catch (e) {}
+  // 真实登录后 token 存在 localStorage 里
+  try {
+    return !!localStorage.getItem('wg_token');
+  } catch (e) {
+    return false;
+  }
+}
+
+function markLoggedIn() {
+  try { sessionStorage.setItem(LOGGED_KEY, '1'); } catch (e) {}
+}
+
+// 【极其暴力的拦截：在页面刚生成的一瞬间，立刻检查登录状态 / URL】
+(function() {
+  const search = window.location.search;
+  // 网址里带 logged=1（从其他页面点「首页 / 好友」跳回来时会带上）
+  // 或者当前标签页已经登录过，就立刻隐藏登录层，不给浏览器闪一下的机会
+  if (search.indexOf('logged=1') !== -1) markLoggedIn();
+  if (search.indexOf('logged=1') !== -1 || isLoggedIn()) {
+    document.write('<style>#loginLayer { display: none !important; }</style>');
+  }
+  // 如果网址里带有 tab=friend，也要强制切换到好友页
+  if (search.indexOf('tab=friend') !== -1) {
+    document.addEventListener('DOMContentLoaded', function() {
+      const friendTab = document.querySelector('#tabbar .tab[data-page="page-friend"]');
+      if (friendTab) switchTab(friendTab);
+    });
+  }
+})();
+
+function switchTab(el) {
+  document.querySelectorAll('#tabbar .tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(el.dataset.page).classList.add('active');
+  if (el.dataset.page === 'page-friend') renderFollowedUsers();
+}
+
+// ===== 我关注的人：接 /interact/my-follows =====
+//   点整行 → 直接进私信；点头像 → 看主页。
+//
+//   ★ 防并发渲染 ★
+//   这个函数会在多处被调用：页面加载、pageshow、切回好友 tab。
+//   以前是"先清空 → 等接口 → 再追加"，两次调用交错时会出现两份。
+//   现在改成"等接口回来 → 只让最后一次调用清空并渲染"。
+function friendRow(u, description) {
+  const item = document.createElement('div');
+  item.className = 'fitem';
+  item.dataset.uid = String(u.userId);
+  item.tabIndex = 0;
+  item.setAttribute('role', 'link');
+  const openChat = function () { location.href = 'friend-chat.html?userId=' + encodeURIComponent(u.userId); };
+  item.onclick = openChat;
+  item.onkeydown = function (e) { if (e.target === item && e.key === 'Enter') openChat(); };
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  const fallback = document.createElement('span');
+  fallback.className = 'avatar-fallback';
+  fallback.textContent = String(u.nick || '·').charAt(0);
+  avatar.appendChild(fallback);
+  if (u.avatar) {
+    const img = document.createElement('img');
+    img.src = u.avatar;
+    img.alt = '';
+    img.onerror = function () { img.style.display = 'none'; };
+    avatar.appendChild(img);
+  }
+  avatar.onclick = function (e) {
+    e.stopPropagation();
+    location.href = 'diary-public.html?profileUserId=' + encodeURIComponent(u.userId);
+  };
+  const body = document.createElement('div');
+  body.style.cssText = 'flex:1;min-width:0';
+  const name = document.createElement('div');
+  name.className = 'name';
+  name.textContent = u.nick || 'ta';
+  const desc = document.createElement('div');
+  desc.className = 'desc';
+  desc.textContent = description == null ? (u.signature || ((u.diaryCount || 0) + ' 篇日记')) : description;
+  body.appendChild(name);
+  body.appendChild(desc);
+  item.appendChild(avatar);
+  item.appendChild(body);
+  return item;
+}
+
+async function renderFollowedUsers() {
+  const list = document.getElementById('followedList');
+  if (!list) return;
+
+  window.__rfSeq = (window.__rfSeq || 0) + 1;
+  const seq = window.__rfSeq;
+
+  const r = await api('/interact/my-follows?size=50');
+  if (seq !== window.__rfSeq) return;
+
+  if (r.code !== 0 || !r.data) {
+    list.textContent = r.msg || '好友加载失败，请稍后重试';
+    if (typeof window.__renderRecentDm === 'function') window.__renderRecentDm();
+    return;
+  }
+  const users = r.data.list || [];
+  let stats = null;
+
+  // 粉丝数（用来显示右上角那个入口）
+  try {
+    const st = await api('/interact/friend-stats');
+    if (seq !== window.__rfSeq) return;
+    if (st.code === 0 && st.data) {
+      stats = st.data;
+      const fc = document.getElementById('fanCount');
+      if (fc) fc.textContent = String(st.data.fans || 0);
+    }
+  } catch (e) {}
+  if (seq !== window.__rfSeq) return;
+
+  // 同一人只画一次
+  const seen = new Set();
+  const uniq = users.filter(function (u) {
+    const k = String(u.userId);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  // ★ 双向关注 = 好友；我只关注了 ta、ta 没回关 = 等对方回关 ★
+  const friends = uniq.filter(function (u) { return u.isMutual; });
+  const waiting = uniq.filter(function (u) { return !u.isMutual; });
+
+  list.innerHTML = '';
+
+  const title = document.getElementById('friendSecTitle');
+  if (title) title.textContent = '好友 ' + (stats ? stats.friends : friends.length) + ' · ' + '关注 ' + (stats ? stats.following : uniq.length);
+
+  function sectionLabel(text) {
+    const d = document.createElement('div');
+    d.className = 'fsec-sub';
+    d.textContent = text;
+    return d;
+  }
+
+  if (!uniq.length) {
+    const empty = document.createElement('div');
+    empty.className = 'fitem';
+    empty.onclick = function () { location.href = 'discover.html'; };
+    empty.innerHTML = '<div class="avatar">·</div><div><div class="name">还没有好友</div><div class="desc">去发现里关注几个人吧</div></div>';
+    list.appendChild(empty);
+    if (typeof window.__renderRecentDm === 'function') window.__renderRecentDm();
+    return;
+  }
+
+  if (friends.length) {
+    friends.forEach(function (u) { list.appendChild(friendRow(u)); });
+  } else {
+    list.appendChild(sectionLabel('还没有互相关注的人 —— 对方回关之后就会出现在这里'));
+  }
+
+  if (waiting.length) {
+    list.appendChild(sectionLabel('我关注的 · 等对方回关（' + waiting.length + '）'));
+    waiting.forEach(function (u) { list.appendChild(friendRow(u)); });
+  }
+
+  // 列表画完了，把私信未读点补上（不用 MutationObserver，避免自己触发自己）
+  if (typeof window.__decorateDm === 'function') window.__decorateDm();
+  if (typeof window.__renderRecentDm === 'function') window.__renderRecentDm();
+}
+
+// ===== 群聊：接后端 /api/group（3 秒轮询新消息） =====
+//
+//  ★ 为什么是轮询，不是 WebSocket ★
+//    群聊必须"别人说的话能自己冒出来"，否则要手动刷新。
+//    用 HTTP 轮询最省事：每 3 秒问一句"有没有比我手上这条更新的消息"。
+//    后端为此多认了一个 ?after= 参数（接口数量不变）。
+//
+//  ★ 三个细节 ★
+//    1. 只拉新增的（after=lastMsgId），不是每次重拉 30 条
+//    2. 页面切后台就暂停，切回来立刻补一次
+//    3. 正在往上翻历史时不强行滚到底
+let currentRoom = null;
+let lastMsgId = 0;
+let pollTimer = null;
+
+function esc(t) {
+  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function gmsgHtml(m) {
+  if (m.isSys) return '<div class="gmsg sys">' + esc(m.content) + '</div>';
+  return '<div class="gmsg ' + (m.isMine ? 'me' : 'other') + '">'
+    // 昵称空了就写「已注销用户」：删过账号后消息还在，不兜底就是一片空白
+    + (m.isMine ? '' : '<div class="who">' + esc(m.nick || '已注销用户') + '</div>')
+    + esc(m.content) + '</div>';
+}
+
+function gchatAppend(m) {
+  const box = document.getElementById('gchat');
+  const hint = box.querySelector('.gmsg.sys[data-empty]');
+  if (hint) hint.remove();
+  const tmp = document.createElement('div');
+  tmp.innerHTML = gmsgHtml(m);
+  if (tmp.firstChild) box.appendChild(tmp.firstChild);
+  if (m.id > lastMsgId) lastMsgId = m.id;
+}
+
+function gchatNearBottom() {
+  const box = document.getElementById('gchat');
+  return box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+}
+
+function stopPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+async function pullNew(code) {
+  const r = await api('/group/rooms/' + code + '/messages?after=' + lastMsgId + '&limit=50');
+  if (r.code !== 0) return;
+  const list = (r.data && r.data.list) || [];
+  if (!list.length) return;
+
+  const keep = gchatNearBottom();
+  list.forEach(gchatAppend);
+  if (keep) {
+    const box = document.getElementById('gchat');
+    box.scrollTop = box.scrollHeight;
+  }
+  // 新消息到了就算已读
+  api('/group/rooms/' + code + '/read', { method: 'POST' });
+  const b = document.getElementById('badge-' + code);
+  if (b) b.style.display = 'none';
+}
+
+function startPoll(code) {
+  stopPoll();
+  pollTimer = setInterval(function () {
+    if (currentRoom !== code) return;
+    if (document.hidden) return;                        // 切到别的标签页就暂停
+    if (!localStorage.getItem('wg_token')) return;      // 退出登录了就别问
+    pullNew(code);
+  }, 3000);
+}
+
+// 从后台切回来立刻补一次，不用干等 3 秒
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && currentRoom) pullNew(currentRoom);
+});
+
+async function openGroup(code, name) {
+  currentRoom = code;
+  lastMsgId = 0;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('groupTitle').textContent = name;
+  document.getElementById('groupPage').classList.add('active');
+  document.getElementById('tabbar').style.display = 'none';
+
+  const box = document.getElementById('gchat');
+  box.innerHTML = '<div class="gmsg sys">加载中…</div>';
+
+  const res = await api('/group/rooms/' + code + '/messages?limit=30');
+  if (res.code !== 0) {
+    box.innerHTML = '<div class="gmsg sys">' + esc(res.msg || '加载失败') + '</div>';
+    return;
+  }
+
+  const list = (res.data && res.data.list) || [];
+  const __roomTag = (res.data && res.data.tag) || null;
+  document.getElementById('groupTitle').textContent = __roomTag ? (name + ' · ' + __roomTag.label) : name;
+  // 逐条追加：超过 5 分钟就插一条居中时间（和微信一致）
+  box.innerHTML = '';
+  if (!list.length) {
+    box.innerHTML = '<div class="gmsg sys" data-empty>还没有人说话，你先来吧</div>';
+  } else {
+    list.forEach(function (m) {
+      const __gtTs = m.createdAt ? Date.parse(String(m.createdAt).replace(' ', 'T')) : 0;
+      const __gtLast = box.lastElementChild;
+      const __gtLastTs = __gtLast && __gtLast.dataset ? Number(__gtLast.dataset.ts || 0) : 0;
+      if (__gtTs && (!__gtLastTs || __gtTs - __gtLastTs > 5 * 60 * 1000)) {
+        const __gtD = new Date(__gtTs);
+        const __gtHm = ('0' + __gtD.getHours()).slice(-2) + ':' + ('0' + __gtD.getMinutes()).slice(-2);
+        const __gtNow = new Date();
+        const __gtY = new Date(__gtNow.getTime() - 86400000);
+        const __gtText = __gtD.toDateString() === __gtNow.toDateString()
+          ? __gtHm
+          : (__gtD.toDateString() === __gtY.toDateString()
+              ? '昨天 ' + __gtHm
+              : ((__gtD.getMonth() + 1) + '月' + __gtD.getDate() + '日 ' + __gtHm));
+        const __gtEl = document.createElement('div');
+        __gtEl.className = 'gtime';
+        __gtEl.textContent = __gtText;
+        box.appendChild(__gtEl);
+      }
+      box.insertAdjacentHTML('beforeend', gmsgHtml(m));
+      const __gtNode = box.lastElementChild;
+      if (__gtNode && __gtNode.dataset && __gtTs) __gtNode.dataset.ts = String(__gtTs);
+    });
+  }
+
+  list.forEach(function (m) { if (m.id > lastMsgId) lastMsgId = m.id; });
+  box.scrollTop = box.scrollHeight;
+
+  api('/group/rooms/' + code + '/read', { method: 'POST' });
+  const b = document.getElementById('badge-' + code);
+  if (b) b.style.display = 'none';
+
+  startPoll(code);   // ★ 进来就开始盯着有没有新消息
+}
+
+async function loadGroupBadges() {
+  const res = await api('/group/rooms');
+  if (res.code !== 0) return;
+  (res.data.list || []).forEach(function (r) {
+    const b = document.getElementById('badge-' + r.code);
+    if (!b) return;
+    if (r.unread > 0) { b.textContent = r.unread > 99 ? '99+' : r.unread; b.style.display = 'block'; }
+    else { b.style.display = 'none'; }
+  });
+}
+
+function closeGroup() {
+  stopPoll();          // 离开群就停掉轮询，别让它在后台空转
+  currentRoom = null;
+  document.getElementById('groupPage').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+  document.getElementById('tabbar').style.display = 'flex';
+}
+
+// ===== 头像：有上传的图就用图，没有就用昵称第一个字（腾讯会议那种） =====
+function avatarInner(nick, avatar) {
+  if (avatar) return '<img src="' + String(avatar).replace(/"/g, '&quot;') + '" alt="">';
+  const n = (nick || '匿').trim();
+  return n.charAt(0) || '匿';
+}
+
+function escHtml(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+// ===== 往群里加一条消息（带头像） =====
+function addGroupMsg(text, who, nick, avatar) {
+  const chat = document.getElementById('gchat');
+  const row = document.createElement('div');
+  row.className = 'grow' + (who === 'me' ? ' me' : '');
+  row.innerHTML =
+    '<div class="gav">' + avatarInner(nick, avatar) + '</div>' +
+    '<div class="gmsg ' + (who || '') + '">' + escHtml(text) + '</div>';
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function currentUser() {
+  try { return JSON.parse(localStorage.getItem('wg_user') || 'null') || {}; } catch (e) { return {}; }
+}
+
+function sendGroup() {
+  const input = document.getElementById('ginput');
+  const text = input.value.trim();
+  if (!text) return;
+  const u = currentUser();
+  addGroupMsg(text, 'me', u.nickname || u.phone || '我', u.avatar || '');
+  input.value = '';
+}
+document.getElementById('ginput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendGroup();
+});
+
+// ===== 互动消息：点赞 / 收藏 / 评论 =====
+// 后端接口：GET /api/interact/notifications?limit=20
+// 返回：{ code:0, data:{ list:[{ id, type:'like'|'favorite'|'comment', from:{id,nickname,avatar},
+//        diaryId, diaryTitle, content, createdAt, read:false }], unread: 3 } }
+async function loadInteractions() {
+  const box = document.getElementById('interactList');
+  const dot = document.getElementById('interactDot');
+  if (!box) return;
+
+  const res = await api('/interact/notifications?limit=20');
+  if (res.code !== 0 || !res.data) {
+    box.innerHTML = '<div class="iempty">还没有新的互动</div>';
+    if (dot) dot.hidden = true;
+    return;
+  }
+
+  const list = res.data.list || [];
+  const unread = Number(res.data.unread || 0);
+  if (dot) {
+    if (unread > 0) { dot.hidden = false; dot.textContent = unread > 99 ? '99+' : unread; }
+    else dot.hidden = true;
+  }
+
+  if (!list.length) {
+    box.innerHTML = '<div class="iempty">还没有新的互动</div>';
+    return;
+  }
+
+  const text = { like: '赞了你的日记', favorite: '收藏了你的日记', comment: '评论了你', mention: '在评论里提到了你', reply: '回复了你的评论' };
+  box.innerHTML = list.map(function (n) {
+    const who = (n.from && n.from.nickname) || '有人';
+    const label = text[n.type] || '和你互动了';
+    const extra = n.content ? '：' + escHtml(n.content) : '';
+    const time = (n.createdAt || '').slice(5, 16).replace('-', '.');
+    const href = n.diaryId ? "location.href='diary-public.html?id=" + n.diaryId + "'" : '';
+    return '<div class="irow" onclick="' + href + '">' +
+      '<div class="ia">' + avatarInner(who, n.from && n.from.avatar) + '</div>' +
+      '<div class="it"><div class="t1">' + escHtml(who) + ' ' + label + extra + '</div>' +
+      '<div class="t2">' + (n.diaryTitle ? '《' + escHtml(n.diaryTitle) + '》' : '') + '</div></div>' +
+      '<div class="tm">' + time + '</div></div>';
+  }).join('');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+function sendCode() {
+  const phone = document.getElementById('phone').value.trim();
+  if (!/^\d{11}$/.test(phone)) {
+    showToast('您的手机号码错误');
+    return;
+  }
+  showToast('验证码已发送');
+}
+
+function doLogin() { location.href = 'login.html'; }
+function enterApp() {
+  markLoggedIn();
+  document.getElementById('loginLayer').classList.add('hide');
+}
+
+// 首次加载、返回页面、切换回来、其它标签页关注变化时，都刷新关注列表
+renderFollowedUsers();
+window.addEventListener('pageshow', renderFollowedUsers);
+window.addEventListener('storage', e => {
+  if (e.key === 'my_follows') renderFollowedUsers();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) renderFollowedUsers();
+});
+loadInteractions();
+
+loadGroupBadges();
+
+// ===== 群聊：头像兜底 + 发消息走接口 =====
+// 这份代码会被追加到 index.html 脚本末尾。
+// JS 里同名的函数声明，后面的会覆盖前面的 —— 所以这里直接重写这三个函数，
+// 不用去原稿里做脆弱的字符串替换。
+
+// 头像：有图用图，没图 / 图挂了就用昵称第一个字
+function avatarInner(nick, avatar) {
+  const n = String(nick == null ? '' : nick).trim() || '匿';
+  // Array.from 按「字符」切，不会把 emoji 切成半个乱码（charAt 会）
+  const first = Array.from(n)[0] || '匿';
+  const ch = first.replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+
+  // 文字垫在底下，图片盖在上面；图片加载失败就把 img 删掉，露出文字
+  let html = '<span class="gav-txt">' + ch + '</span>';
+  if (avatar) {
+    html += '<img src="' + String(avatar).replace(/"/g, '&quot;') + '" alt="" onerror="this.remove()">';
+  }
+  return html;
+}
+
+// 一条群消息：头像 + 气泡（别人的气泡上再带个昵称）
+function gmsgHtml(m) {
+  if (m.isSys) return '<div class="gmsg sys">' + esc(m.content) + '</div>';
+
+  const me = currentUser() || {};
+  const who = m.isMine ? (me.nickname || me.phone || '我') : (m.nick || '已注销用户');
+  // 消息里带了这个人的头像就优先用它（登录时缓存的可能是旧数据）
+  const av = m.avatar || (m.isMine ? (me.avatar || '') : '');
+
+  // 别人的头像可点 → 进主页（自己点头像没意义）
+  const avAttr = (!m.isMine && m.userId)
+    ? ' data-profile="' + esc(String(m.userId)) + '" style="cursor:pointer;" title="看 ta 的主页"'
+    : '';
+
+  return '<div class="grow ' + (m.isMine ? 'me' : '') + '">'
+    + '<div class="gav"' + avAttr + '>' + avatarInner(who, av) + '</div>'
+    + '<div class="gmsg ' + (m.isMine ? 'me' : 'other') + '">'
+    + (m.isMine ? '' : '<div class="who">' + esc(m.nick || '已注销用户') + '</div>')
+    + esc(m.content)
+    + '</div></div>';
+}
+
+// 发消息：真的发到后端，用返回的消息渲染（和轮询拉到的长一个样）
+function showGroupCare(care) {
+  if (!care) return;
+  const box = document.getElementById('gchat');
+  const card = document.createElement('div');
+  card.className = 'group-care';
+  card.setAttribute('role', 'status');
+  const message = document.createElement('div');
+  message.textContent = care.message || '如果现在很难受，可以联系这些支持渠道。';
+  card.appendChild(message);
+  (Array.isArray(care.lines) ? care.lines : []).forEach(function (line) {
+    const link = document.createElement('a');
+    link.textContent = line.name + '：' + line.phone;
+    link.href = 'tel:' + String(line.phone || '').replace(/[^\d+()-]/g, '');
+    card.appendChild(link);
+  });
+  box.appendChild(card);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendGroup() {
+  const input = document.getElementById('ginput');
+  const text = input.value.trim();
+  if (!text || !currentRoom) return;
+  const room = currentRoom;
+
+  input.value = '';
+  const box = document.getElementById('gchat');
+
+  const res = await api('/group/rooms/' + room + '/messages', {
+    method: 'POST',
+    body: { content: text },
+  });
+
+  if (currentRoom !== room) return;
+  if (res.data && res.data.care) showGroupCare(res.data.care);
+  if (res.code !== 0) {
+    showToast(res.msg || '发送失败');
+    input.value = text;          // 发失败就把内容还回去
+    return;
+  }
+
+  if (res.data && res.data.blocked) {
+    showToast(res.msg || '这句话不适合发在这里');
+    return;
+  }
+
+  const m = res.data && res.data.message;
+  if (m) {
+    if (m.id > lastMsgId) lastMsgId = m.id;   // 别让轮询把自己刚发的又拉一遍
+    const tmp = document.createElement('div');
+    tmp.innerHTML = gmsgHtml(m);
+    if (tmp.firstChild) box.appendChild(tmp.firstChild);
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+// ===== 补一刀：本地没存用户信息时，拉一次自己的资料 =====
+//   正常走登录页会存 wg_user；但如果是直接带 token 进来（比如刷新、外部跳入），
+//   就会没有昵称，自己的头像只能显示成「我」。
+(async function ensureMe() {
+  try {
+    if (!getToken()) return;
+    // 每次进页面都刷一次：头像/昵称可能刚在设置页改过，
+    // 本地缓存不刷的话，群聊里自己的头像会一直停在旧值。
+    const me = currentUser();
+    const r = await api('/user/me');
+    if (r.code === 0 && r.data && r.data.user) setUser(r.data.user);
+  } catch (e) {}
+})();
+
+// ===== 互动消息：点哪一条，就标记哪一条已读 =====
+// 原来的列表行没有 id，也没有点击处理，所以没法"按条"处理。
+// 这里重写 loadInteractions：渲染时把 id 写在 data-nid 上，
+// 点击时只把这一条标成已读，红点数字跟着减。
+
+let __unreadCount = 0;
+
+function __setDot() {
+  const dot = document.getElementById('interactDot');
+  if (!dot) return;
+  if (__unreadCount > 0) {
+    dot.hidden = false;
+    dot.textContent = __unreadCount > 99 ? '99+' : __unreadCount;
+  } else {
+    dot.hidden = true;
+  }
+}
+
+async function loadInteractions() {
+  const box = document.getElementById('interactList');
+  if (!box) return;
+
+  const res = await api('/interact/notifications?limit=20');
+  if (res.code !== 0 || !res.data) {
+    __unreadCount = 0;
+    __setDot();
+    box.innerHTML = '<div class="iempty">还没有新的互动</div>';
+    return;
+  }
+
+  const list = res.data.list || [];
+  __unreadCount = Number(res.data.unread || 0);
+  __setDot();
+
+  if (!list.length) {
+    box.innerHTML = '<div class="iempty">还没有新的互动</div>';
+    return;
+  }
+
+  const text = { like: '赞了你的日记', favorite: '收藏了你的日记', comment: '评论了你',
+                 mention: '在评论里提到了你', reply: '回复了你的评论',
+                 bless: '给你送了一句祝福', message: '给你发了一条私信' };
+
+  box.innerHTML = list.map(function (n) {
+    const who = (n.from && n.from.nickname) || '有人';
+    const label = text[n.type] || '和你互动了';
+    const extra = n.content ? '：' + escHtml(n.content) : '';
+    const time = (n.createdAt || '').slice(5, 16).replace('-', '.');
+    return '<div class="irow' + (n.read ? ' is-read' : '') + '"'
+      + ' data-nid="' + n.id + '"'
+      + ' data-diary="' + (n.diaryId || '') + '"' + ' data-type="' + n.type + '"'
+      + ' data-from="' + ((n.from && n.from.id) || '') + '"'
+      + ' style="cursor:pointer;' + (n.read ? 'opacity:.55;' : '') + '">'
+      + '<div class="ia">' + avatarInner(who, n.from && n.from.avatar) + '</div>'
+      + '<div class="it"><div class="t1">' + escHtml(who) + ' ' + label + extra + '</div>'
+      + '<div class="t2">' + (n.diaryTitle ? '《' + escHtml(n.diaryTitle) + '》' : '') + '</div></div>'
+      + '<div class="tm">' + time + '</div></div>';
+  }).join('');
+
+  // 点某一条：只标这一条已读，然后跳去看
+  box.querySelectorAll('.irow').forEach(function (row) {
+    row.addEventListener('click', async function () {
+      const nid = row.getAttribute('data-nid');
+      const did = row.getAttribute('data-diary');
+
+      if (nid && !row.classList.contains('is-read')) {
+        row.classList.add('is-read');
+        row.style.opacity = '.55';
+        __unreadCount = Math.max(0, __unreadCount - 1);
+        __setDot();
+
+        // ★ 必须等接口回来再跳转 ★
+        //   以前是发完就走，页面一跳，请求被取消 ——
+        //   服务端没记成已读，返回首页红点又回来了。
+        __markingRead = true;
+        try {
+          await api('/interact/notifications/read', { method: 'POST', body: { ids: [Number(nid)] } });
+        } catch (e) {}
+        __markingRead = false;
+      }
+
+      const type = row.getAttribute('data-type');
+      if (type === 'bless') { location.href = 'bless-sent.html?type=received'; return; }
+      if (type === 'message') {
+        const fm = row.getAttribute('data-from');
+        if (fm) location.href = 'friend-chat.html?userId=' + fm;
+        return;
+      }
+      if (did) location.href = 'diary-public.html?id=' + did;
+    });
+  });
+}
+
+// ===== 记住当前在哪个 tab =====
+// 从「好友」页点一条互动消息 → 进日记详情 → 点返回，
+// index.html 会被重新加载，默认回到「首页」。
+// 这里把 tab 记在 sessionStorage，回来时还原。
+
+const __origSwitchTab = switchTab;
+switchTab = function (el) {
+  __origSwitchTab(el);
+  try {
+    if (el && el.dataset && el.dataset.page) {
+      sessionStorage.setItem('wx_tab', el.dataset.page);
+    }
+  } catch (e) {}
+};
+
+(function __restoreTab() {
+  try {
+    const params = new URLSearchParams(location.search);
+
+    // ?tab=home：强制回首页（微光同行那种"只属于首页"的页面返回时用）
+    if (params.get('tab') === 'home') {
+      const home = document.querySelector('.tab[data-page="page-home"]');
+      if (home) switchTab(home);
+      sessionStorage.setItem('wx_tab', 'page-home');
+      return;
+    }
+
+    const saved = sessionStorage.getItem('wx_tab');
+
+    // 这次就是落在首页，就把记忆也归零，免得下次从别的页回来又被带到好友
+    if (!saved || saved === 'page-home') {
+      sessionStorage.setItem('wx_tab', 'page-home');
+      return;
+    }
+
+    const el = document.querySelector('.tab[data-page="' + saved + '"]');
+    if (!el) return;
+    // 等页面初始化完再切
+    setTimeout(function () { switchTab(el); }, 60);
+  } catch (e) {}
+})();
+
+// __gavToProfile
+
+// ===== 点头像看主页（群聊）=====
+//  用事件委托，不用给每条消息单独绑（消息是动态追加的）
+document.addEventListener('click', function (e) {
+  var av = e.target.closest && e.target.closest('#gchat .gav[data-profile]');
+  if (!av) return;
+  e.stopPropagation();
+  location.href = 'diary-public.html?profileUserId=' + encodeURIComponent(av.getAttribute('data-profile'));
+});
+
+// ===== 群聊时间分隔 =====
+//  微信那种：消息之间超过 5 分钟，就插一条居中的时间。
+//  判断依据放在上一条消息的 dataset.ts 上，不依赖全局变量，
+//  切换房间、清空列表都不会错乱。
+(function gtimeLabel() {
+  function parseTs(m) {
+    const raw = m.createdAt || '';
+    if (!raw) return 0;
+    const t = Date.parse(String(raw).replace(' ', 'T'));
+    return isFinite(t) ? t : 0;
+  }
+
+  function fmt(ts) {
+    const d = new Date(ts);
+    const now = new Date();
+    const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const sameDay = d.toDateString() === now.toDateString();
+    if (sameDay) return hm;
+    const y = new Date(now.getTime() - 86400000);
+    if (d.toDateString() === y.toDateString()) return '昨天 ' + hm;
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + hm;
+  }
+
+  function wrap() {
+    const orig = window.gchatAppend;
+    if (typeof orig !== 'function' || orig.__withTime) return;
+
+    window.gchatAppend = function (m) {
+      const box = document.getElementById('gchat');
+      const ts = parseTs(m);
+      const last = box && box.lastElementChild;
+      const lastTs = last && last.dataset ? Number(last.dataset.ts || 0) : 0;
+
+      // 超过 5 分钟（或列表为空）就插一条时间
+      if (box && ts && (!lastTs || ts - lastTs > 5 * 60 * 1000)) {
+        const t = document.createElement('div');
+        t.className = 'gtime';
+        t.textContent = fmt(ts);
+        box.appendChild(t);
+      }
+
+      const ret = orig(m);
+
+      const after = box && box.lastElementChild;
+      if (after && after.dataset && ts) after.dataset.ts = String(ts);
+      return ret;
+    };
+    window.gchatAppend.__withTime = true;
+  }
+
+  // index.html 里 gchatAppend 是函数声明，等它定义好再包一层
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wrap);
+  } else {
+    wrap();
+  }
+  setTimeout(wrap, 300);
+})();
+
+
+// ============================================================
+//  好友页「互动消息」自动刷新
+//
+//  问题：互动消息只在 index.html 加载时拉一次。
+//        别人刚送的祝福/点赞，必须手动刷新浏览器才看得到；
+//        切到「好友」tab 也不会重新拉。
+//
+//  做法三件事：
+//    1. 每次切到「好友」tab 都重新拉一次
+//    2. 后台每 25 秒轮询一次（躺在床上也能收到新消息）
+//    3. 底部「好友」tab 上加个红点，未读不为 0 就亮
+//       —— 不用点进去才知道有消息
+// ============================================================
+(function () {
+  var POLL_MS = 25000;
+  var timer = null;
+
+  // ---------- 底部红点 ----------
+  function tabBadge() {
+    var el = document.getElementById('friendTabBadge');
+    if (el) return el;
+    var tab = document.querySelector('#tabbar .tab[data-page="page-friend"]');
+    if (!tab) return null;
+    el = document.createElement('span');
+    el.id = 'friendTabBadge';
+    el.className = 'tab-badge';
+    el.hidden = true;
+    tab.appendChild(el);
+    return el;
+  }
+
+  // 把「互动消息」标题旁边的数字同步到底部 tab
+  function syncBadge() {
+    var b = tabBadge();
+    if (!b) return;
+
+    // 互动消息未读
+    var a = Number(__unreadCount) || 0;
+
+    // 私信未读
+    var d = 0;
+    var map = window.__dmUnread || {};
+    Object.keys(map).forEach(function (k) { d += Number(map[k]) || 0; });
+
+    var n = a + d;
+    if (n > 0) { b.textContent = n > 99 ? '99+' : String(n); b.hidden = false; }
+    else { b.hidden = true; }
+  }
+  window.syncFriendTabBadge = syncBadge;
+
+  // 节流：连点 tab、多入口同时触发时，避免一下子打好几个请求
+  //   （实测快速切换会并发 4 个同样的请求，日志里一片重复）
+  var inflight = false;
+  var lastAt = 0;
+
+  function refreshNotices(force) {
+    if (typeof loadInteractions !== 'function') return;
+    var now = Date.now();
+    if (inflight) return;
+    if (!force && now - lastAt < 1500) return;
+    inflight = true;
+    lastAt = now;
+    var done = function () { inflight = false; syncBadge(); };
+    var p = loadInteractions();
+    if (p && typeof p.then === 'function') p.then(done, done);
+    else done();
+  }
+
+  // ---------- 1. 切 tab 就刷新 ----------
+  var origSwitch = window.switchTab;
+  if (typeof origSwitch === 'function') {
+    window.switchTab = function (el) {
+      origSwitch.apply(this, arguments);
+      if (el && el.dataset && el.dataset.page === 'page-friend') refreshNotices();
+    };
+  }
+
+  // ---------- 2. 定时轮询 ----------
+  function poll() {
+    refreshNotices(true);
+  }
+
+  function startPoll() {
+    if (timer) return;
+    timer = setInterval(poll, POLL_MS);
+  }
+
+  // ---------- 3. 样式 ----------
+  function injectStyle() {
+    if (document.getElementById('tabBadgeStyle')) return;
+    var st = document.createElement('style');
+    st.id = 'tabBadgeStyle';
+    st.textContent =
+      '#tabbar .tab { position: relative; }\n' +
+      '#tabbar .tab-badge {\n' +
+      '  position: absolute; top: 6px; left: 50%; margin-left: 8px;\n' +
+      '  min-width: 15px; height: 15px; line-height: 15px; padding: 0 4px;\n' +
+      '  border-radius: 8px; background: #e2604f; color: #fff;\n' +
+      '  font-size: 10px; font-style: normal; text-align: center;\n' +
+      '  box-shadow: 0 1px 3px rgba(0,0,0,.15);\n' +
+      '}';
+    document.head.appendChild(st);
+  }
+
+  // ---------- 启动 ----------
+  function boot() {
+    injectStyle();
+    setTimeout(function () { refreshNotices(true); }, 800);   // 等首屏自己的那次拉完
+    startPoll();
+    // 从后台切回来（手机切 App）也刷一次
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) refreshNotices(true);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+<script>// ============================================================
+//  好友页：扫一扫 / 搜 ID 加好友
+//
+//  放在「我关注的人」标题右侧，两个小按钮：
+//    · 扫一扫 —— 用摄像头识别二维码，扫的是别人主页的链接
+//      （设置页「二维码」生成的就是 diary-public.html?profileUserId=xx）
+//    · 搜 ID —— 输入对方 ID 或昵称，查到人直接关注
+//
+//  摄像头 / BarcodeDetector 不一定可用（不是 https、或者浏览器不支持），
+//  那就退回"手动粘贴链接或 ID"，不至于整块功能用不了。
+// ============================================================
+(function () {
+  if (typeof api !== 'function') return;
+
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    if (!t) { alert(msg); return; }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+
+  // ---------- 通用弹层 ----------
+  function sheet(title, innerHTML) {
+    closeSheet();
+    var mask = document.createElement('div');
+    mask.id = '__addMask';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:9998;'
+      + 'display:flex;align-items:flex-end;justify-content:center;';
+    mask.innerHTML =
+      '<div style="width:100%;max-width:520px;background:#fbfaf8;border-radius:18px 18px 0 0;'
+      + 'padding:18px 18px 22px;max-height:86vh;overflow:auto;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+      + '<b style="font-size:16px;color:#4a4a42;">' + esc(title) + '</b>'
+      + '<span data-close style="color:#a8a294;font-size:13px;cursor:pointer;">关闭</span>'
+      + '</div>' + innerHTML + '</div>';
+    document.body.appendChild(mask);
+    mask.addEventListener('click', function (e) {
+      if (e.target === mask || e.target.hasAttribute('data-close')) closeSheet();
+    });
+    return mask;
+  }
+
+  function closeSheet() {
+    var m = document.getElementById('__addMask');
+    if (m) m.remove();
+    stopCamera();
+  }
+
+  // ---------- 关注一个用户 ----------
+  // ★ 注意：后端的 /interact/follow 是"切换" ★
+  //   已经关注过再点会取消关注，返回 data.followed=false。
+  //   以前这里不看返回值，一律提示"已关注"，实际却把人取关了。
+  async function follow(userId, nick) {
+    var r = await api('/interact/follow/' + userId, { method: 'POST' });
+    if (r.code !== 0) { toast(r.msg || '操作失败'); return; }
+
+    var followed = !!(r.data && r.data.followed);
+    toast(followed ? ('已关注 ' + (nick || 'ta')) : ('已取消关注 ' + (nick || 'ta')));
+    closeSheet();
+    if (typeof renderFollowedUsers === 'function') renderFollowedUsers();
+  }
+
+  // 我自己的 id（搜到自己时不要把「关注」按钮给出来）
+  var myId = (function () {
+    try {
+      var u = JSON.parse(localStorage.getItem('wg_user') || 'null');
+      return u && u.id ? u.id : '';
+    } catch (e) { return ''; }
+  })();
+
+  // 我关注了谁（用于把搜索结果里的按钮标成「已关注」）
+  var alreadySet = {};
+
+  async function loadFollowed() {
+    try {
+      var r = await api('/interact/my-follows');
+      var list = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+      alreadySet = {};
+      list.forEach(function (u) { alreadySet[String(u.userId != null ? u.userId : u.id)] = true; });
+    } catch (e) { alreadySet = {}; }
+  }
+
+  function userRow(u) {
+    // 后端 /user/search 返回 { userId, uid, nick, avatar }，
+    // 别处是 { id, nickname } —— 两种都兼容。
+    var uid_ = u.userId != null ? u.userId : u.id;
+    var nick_ = u.nickname != null ? u.nickname : u.nick;
+    var isSelf = String(uid_) === String(myId);
+
+    var av = u.avatar
+      ? '<img src="' + esc(u.avatar) + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;" onerror="this.remove()">'
+      : '<span style="width:44px;height:44px;border-radius:50%;background:#dbe7f8;color:#3f6ea8;'
+        + 'display:flex;align-items:center;justify-content:center;font-size:18px;">'
+        + esc(String(nick_ || '匿').charAt(0)) + '</span>';
+
+    var btn;
+    if (isSelf) {
+      btn = '<span style="font-size:12px;color:#b0aa9c;padding:7px 10px;">这是你自己</span>';
+    } else if (alreadySet[String(uid_)]) {
+      btn = '<button data-follow="' + esc(uid_) + '" data-nick="' + esc(nick_ || '') + '" '
+        + 'style="border:0;background:#eee9e1;color:#9a9488;font-size:13px;padding:7px 14px;'
+        + 'border-radius:14px;cursor:default;" data-done="1">已关注</button>';
+    } else {
+      btn = '<button data-follow="' + esc(uid_) + '" data-nick="' + esc(nick_ || '') + '" '
+        + 'style="border:0;background:#a8b89c;color:#fff;font-size:13px;padding:7px 14px;'
+        + 'border-radius:14px;cursor:pointer;">关注</button>';
+    }
+
+    return '<div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;'
+      + 'padding:12px 14px;margin-bottom:10px;">' + av
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:15px;color:#4a4a42;">' + esc(nick_ || 'ta') + '</div>'
+      + '<div style="font-size:12px;color:#b0aa9c;margin-top:3px;">ID ' + esc(u.uid || '') + '</div>'
+      + '</div>' + btn + '</div>';
+  }
+
+  function bindFollowButtons(root) {
+    root.querySelectorAll('[data-follow]').forEach(function (b) {
+      b.onclick = function () {
+        if (b.getAttribute('data-done')) { toast('你们已经是好友啦'); return; }
+        follow(b.getAttribute('data-follow'), b.getAttribute('data-nick'));
+      };
+    });
+  }
+
+  // ---------- 搜 ID ----------
+  function openSearch() {
+    var mask = sheet('加好友',
+      '<div style="font-size:12px;color:#b0aa9c;margin-bottom:10px;">'
+      + '输入对方的 ID（一串数字）或者昵称</div>'
+      + '<div style="display:flex;gap:8px;margin-bottom:14px;">'
+      + '<input id="__addInput" placeholder="例如 41824979076" maxlength="32" '
+      + 'style="flex:1;height:44px;border:1px solid #e6e2da;border-radius:12px;padding:0 12px;'
+      + 'font-size:14px;background:#fff;color:#4a4a42;outline:none;" />'
+      + '<button id="__addGo" style="border:0;background:#a8b89c;color:#fff;border-radius:12px;'
+      + 'padding:0 18px;font-size:14px;cursor:pointer;">查找</button></div>'
+      + '<div id="__addResult"></div>');
+
+    var input = mask.querySelector('#__addInput');
+    var btn = mask.querySelector('#__addGo');
+    var box = mask.querySelector('#__addResult');
+
+    async function doSearch() {
+      var q = (input.value || '').trim();
+      if (!q) { box.innerHTML = '<div style="color:#c07a5a;font-size:13px;">先输入 ID 或昵称</div>'; return; }
+      box.innerHTML = '<div style="color:#a8a294;font-size:13px;">查找中…</div>';
+      await loadFollowed();
+
+      // ★ 和二维码联动 ★
+      //   设置页那张二维码里存的是主页链接，很多人会把链接整段复制过来，
+      //   直接丢给 /user/search 是搜不到的（它只认 ID 和昵称）。
+      //   所以先按"链接 / 裸 ID"解析一遍，是链接就换成用户的 ID 再搜。
+      var parsed = parseTarget(q);
+      if (parsed) {
+        if (parsed.kind === 'uid') {
+          q = parsed.uid;
+        } else {
+          var pu = await api('/user/' + parsed.id);
+          if (pu.code === 0 && pu.data && pu.data.user) {
+            box.innerHTML = userRow(pu.data.user);
+            bindFollowButtons(box);
+            return;
+          }
+          box.innerHTML = '<div style="color:#a8a294;font-size:13px;">这个链接里没有对应用户</div>';
+          return;
+        }
+      }
+
+      var r = await api('/user/search?q=' + encodeURIComponent(q));
+      if (r.code !== 0) { box.innerHTML = '<div style="color:#c07a5a;font-size:13px;">' + esc(r.msg || '查找失败') + '</div>'; return; }
+      var list = (r.data && r.data.list) || [];
+      if (!list.length) { box.innerHTML = '<div style="color:#a8a294;font-size:13px;">没找到这个人</div>'; return; }
+      box.innerHTML = list.slice(0, 8).map(userRow).join('');
+      bindFollowButtons(box);
+    }
+
+    btn.onclick = doSearch;
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+    input.focus();
+  }
+
+  // ---------- 扫一扫 ----------
+  var camStream = null;
+
+  function stopCamera() {
+    if (camStream) {
+      camStream.getTracks().forEach(function (t) { t.stop(); });
+      camStream = null;
+    }
+  }
+
+  function parseTarget(text) {
+    // 二维码里可能是主页链接，也可能是裸 ID
+    try {
+      var u = new URL(text);
+      var pid = u.searchParams.get('profileUserId');
+      if (pid) return { kind: 'user', id: Number(pid) };
+    } catch (e) { /* 不是链接 */ }
+    if (/^\d{6,16}$/.test(text)) return { kind: 'uid', uid: text };
+    return null;
+  }
+
+  async function followByUid(uid) {
+    var r = await api('/interact/follow-uid/' + encodeURIComponent(uid), { method: 'POST' });
+    if (r.code !== 0) { toast(r.msg || '操作失败'); return; }
+    var followed = !!(r.data && r.data.followed);
+    toast(followed ? '已关注' : '已取消关注');
+    closeSheet();
+    if (typeof renderFollowedUsers === 'function') renderFollowedUsers();
+  }
+
+  function openScan() {
+    var mask = sheet('扫一扫',
+      '<div id="__scanBox" style="background:#111;border-radius:14px;overflow:hidden;'
+      + 'height:260px;display:flex;align-items:center;justify-content:center;color:#888;font-size:13px;">'
+      + '正在打开摄像头…</div>'
+      + '<div style="font-size:12px;color:#b0aa9c;margin:12px 0 10px;">'
+      + '扫对方的「我的二维码」，或者手动粘贴链接 / 输入 ID</div>'
+      + '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+      + '<label style="flex:1;text-align:center;border:1px solid #e6e2da;background:#fff;color:#5f7a4f;'
+      + 'border-radius:12px;padding:10px 0;font-size:14px;cursor:pointer;">选图片识别'
+      + '<input id="__scanFile" type="file" accept="image/*" style="display:none;" /></label>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<input id="__scanInput" placeholder="粘贴二维码里的链接，或输入 ID" '
+      + 'style="flex:1;height:44px;border:1px solid #e6e2da;border-radius:12px;padding:0 12px;'
+      + 'font-size:13px;background:#fff;color:#4a4a42;outline:none;" />'
+      + '<button id="__scanGo" style="border:0;background:#a8b89c;color:#fff;border-radius:12px;'
+      + 'padding:0 16px;font-size:14px;cursor:pointer;">确定</button></div>');
+
+    var box = mask.querySelector('#__scanBox');
+
+    // 扫码 / 粘贴链接进来时，先确认是不是已经关注了。
+    // 已经关注就不再调切换接口 —— 否则扫第二次反而把人取关了。
+    async function handleText(text) {
+      var t = parseTarget(text);
+      if (!t) { toast('没认出来，粘贴主页链接或直接输 ID'); return; }
+
+      await loadFollowed();
+
+      if (t.kind === 'uid') {
+        var r = await api('/user/search?q=' + encodeURIComponent(t.uid));
+        var u = (r.code === 0 && r.data && r.data.list && r.data.list[0]) || null;
+        if (!u) { toast('没找到这个 ID'); return; }
+        var id = u.userId != null ? u.userId : u.id;
+        var nick = u.nickname != null ? u.nickname : u.nick;
+        if (alreadySet[String(id)]) { toast('你们已经是好友啦'); return; }
+        await follow(id, nick);
+      } else {
+        if (alreadySet[String(t.id)]) { toast('你们已经是好友啦'); return; }
+        // 顺便问一下昵称，提示里能说"已关注 阿棠"而不是"已关注 ta"
+        var pr = await api('/user/' + t.id);
+        var pn = (pr.code === 0 && pr.data && pr.data.user && pr.data.user.nickname) || '';
+        await follow(t.id, pn);
+      }
+    }
+
+    mask.querySelector('#__scanGo').onclick = function () {
+      handleText((mask.querySelector('#__scanInput').value || '').trim());
+    };
+
+    // 从相册选一张二维码图片来识别（不需要摄像头，也不需要 https）
+    mask.querySelector('#__scanFile').onchange = function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (file) decodeFromFile(file, handleText);
+    };
+
+    startCamera(box, handleText);
+  }
+
+  // ---------- 动态加载 jsQR ----------
+  function loadJsQR() {
+    if (window.jsQR) return Promise.resolve(true);
+    if (window.__jsqrLoading) return window.__jsqrLoading;
+    window.__jsqrLoading = new Promise(function (resolve) {
+      var sc = document.createElement('script');
+      sc.src = 'assets/jsQR.js';
+      sc.onload = function () { resolve(!!window.jsQR); };
+      sc.onerror = function () { resolve(false); };
+      document.head.appendChild(sc);
+    });
+    return window.__jsqrLoading;
+  }
+
+  // 从一张图片/canvas 里解码
+  function decodeImage(imgOrCanvas) {
+    if (!window.jsQR) return null;
+    var w = imgOrCanvas.naturalWidth || imgOrCanvas.width;
+    var h = imgOrCanvas.naturalHeight || imgOrCanvas.height;
+    if (!w || !h) return null;
+    var cv = document.createElement('canvas');
+    // 太大的图先缩小，解码更快
+    var scale = Math.min(1, 800 / Math.max(w, h));
+    cv.width = Math.round(w * scale);
+    cv.height = Math.round(h * scale);
+    var ctx = cv.getContext('2d');
+    ctx.drawImage(imgOrCanvas, 0, 0, cv.width, cv.height);
+    var data = ctx.getImageData(0, 0, cv.width, cv.height);
+    var code = window.jsQR(data.data, cv.width, cv.height, { inversionAttempts: 'attemptBoth' });
+    return code && code.data ? code.data : null;
+  }
+
+  // ---------- 摄像头实时扫 ----------
+  async function startCamera(box, onText) {
+    var okJs = await loadJsQR();
+    if (!okJs) {
+      box.innerHTML = '二维码解码库没加载出来，用下面的输入框吧';
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      box.innerHTML = '这个浏览器不给用摄像头，用下面的「选图片识别」或输入框吧';
+      return;
+    }
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch (e) {
+      box.innerHTML = '摄像头打不开（http 局域网地址会被浏览器拦），'
+        + '用下面的「选图片识别」或直接输 ID 吧';
+      return;
+    }
+
+    box.innerHTML = '';
+    var video = document.createElement('video');
+    video.setAttribute('playsinline', '');
+    video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    video.srcObject = camStream;
+    box.appendChild(video);
+    await video.play().catch(function () {});
+
+    var stopped = false;
+
+    function tick() {
+      if (stopped || !camStream) return;
+      var text = decodeImage(video);
+      if (text) { stopped = true; onText(text); return; }
+      setTimeout(tick, 400);
+    }
+    tick();
+  }
+
+  // ---------- 选一张二维码图片识别 ----------
+  async function decodeFromFile(file, onText) {
+    var okJs = await loadJsQR();
+    if (!okJs) { toast('解码库没加载出来'); return; }
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function () {
+      var text = decodeImage(img);
+      URL.revokeObjectURL(url);
+      if (text) onText(text);
+      else toast('这张图里没认出二维码，换一张试试');
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); toast('图片打不开'); };
+    img.src = url;
+  }
+
+
+  // ---------- 入口按钮 ----------
+  function addButtons() {
+    var sec = document.querySelector('.friend-sec');
+    if (!sec || document.getElementById('__addTools')) return;
+
+    var wrap = document.createElement('div');
+    wrap.id = '__addTools';
+    sec.parentNode.insertBefore(wrap, sec.nextSibling);
+
+    var bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:10px;margin:0 4px 12px;';
+    bar.innerHTML =
+      '<button id="__scanBtn" style="flex:1;border:1px solid #e6e2da;background:#fff;color:#5f7a4f;'
+      + 'border-radius:12px;padding:10px 0;font-size:14px;cursor:pointer;">扫一扫</button>'
+      + '<button id="__searchBtn" style="flex:1;border:1px solid #e6e2da;background:#fff;color:#5f7a4f;'
+      + 'border-radius:12px;padding:10px 0;font-size:14px;cursor:pointer;">搜 ID 加好友</button>';
+    wrap.appendChild(bar);
+
+    bar.querySelector('#__scanBtn').onclick = openScan;
+    bar.querySelector('#__searchBtn').onclick = openSearch;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addButtons);
+  } else {
+    addButtons();
+  }
+})();
+</script>
+<script>
+// ===== 好友页右上角「粉丝」：进粉丝列表 =====
+document.addEventListener('click', function (e) {
+  var el = e.target.closest && e.target.closest('#fanEntry');
+  if (!el) return;
+  e.stopPropagation();
+  location.href = 'blank.html?t=我的粉丝';
+});
+</script>
+<script>
+// ============================================================
+//  私信未读红点
+//
+//  ★ 为什么要单独做 ★
+//    页面里没有"会话列表"，私信只能从好友列表点进去；
+//    以前别人给你发私信、或者 @ 了你、给你送祝福，
+//    界面上一点提示都没有 —— 红点只在"互动消息"那一块亮。
+//    这里把未读私信也接进来：
+//      · 好友行右边显示未读条数
+//      · 底部「好友」tab 的角标 = 互动消息未读 + 私信未读
+// ============================================================
+(function dmUnreadBadge() {
+  window.__dmUnread = window.__dmUnread || {};
+  var conversations = [];
+  var loading = false;
+
+  function renderRecent() {
+    var section = document.getElementById('recentDmSection');
+    var list = document.getElementById('recentDmList');
+    var displayed = new Set();
+    document.querySelectorAll('#followedList .fitem[data-uid]').forEach(function (el) { displayed.add(el.dataset.uid); });
+    var others = conversations.filter(function (c) {
+      return c.partner && c.partner.userId && !displayed.has(String(c.partner.userId));
+    });
+    list.textContent = '';
+    section.hidden = !others.length;
+    others.forEach(function (c) {
+      var preview = c.lastMessage || '点击查看消息';
+      list.appendChild(friendRow(c.partner, (c.lastIsMine ? '我：' : '') + preview));
+    });
+    decorate();
+  }
+
+  function decorate() {
+    var map = window.__dmUnread || {};
+    document.querySelectorAll('#followedList .fitem, #recentDmList .fitem').forEach(function (el) {
+      var uid = el.dataset.uid;
+      if (!uid) return;
+      var n = map[uid] || 0;
+      var dot = el.querySelector('.dm-dot');
+      if (!n) { if (dot) dot.remove(); return; }
+      if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'dm-dot';
+        el.appendChild(dot);
+      }
+      dot.textContent = n > 99 ? '99+' : String(n);
+    });
+  }
+
+  async function refreshDmUnread() {
+    if (loading || !getToken()) return;
+    loading = true;
+    try {
+      var r = await api('/message/conversations?size=50');
+      if (r.code !== 0) {
+        if (!conversations.length) {
+          document.getElementById('recentDmSection').hidden = false;
+          document.getElementById('recentDmList').textContent = r.msg || '私信加载失败，请稍后重试';
+        }
+        return;
+      }
+      var map = {};
+      conversations = (r.data && r.data.list) || [];
+      conversations.forEach(function (c) {
+        var pid = c.partner && c.partner.userId;
+        if (pid && c.unread > 0) map[String(pid)] = c.unread;
+      });
+      window.__dmUnread = map;
+      renderRecent();
+      if (typeof window.syncFriendTabBadge === 'function') window.syncFriendTabBadge();
+    } catch (e) {
+      if (!conversations.length) {
+        document.getElementById('recentDmSection').hidden = false;
+        document.getElementById('recentDmList').textContent = '私信加载失败，请稍后重试';
+      }
+    } finally { loading = false; }
+  }
+
+  window.refreshDmUnread = refreshDmUnread;
+  window.__renderRecentDm = renderRecent;
+
+  // 不用 MutationObserver：decorate 自己会改 DOM，会把自己再触发一次（死循环，渲染进程直接崩）
+  // 改成由 renderFollowedUsers 画完列表后显式调一次
+  window.__decorateDm = decorate;
+
+  // 进页面先拉一次，之后跟互动消息一起轮询
+  setTimeout(refreshDmUnread, 800);
+  window.addEventListener('pageshow', refreshDmUnread);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) refreshDmUnread();
+  });
+  setInterval(function () {
+    if (document.hidden) return;
+    refreshDmUnread();
+  }, 25000);
+})();
+</script>
+</body>
+</html>

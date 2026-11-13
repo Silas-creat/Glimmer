@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>看看ta的</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: #111; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+  /* 恢复全屏，不要 max-width */
+  #feed {
+    height: 100vh; 
+    overflow-y: scroll; 
+    scroll-snap-type: y mandatory; 
+    scrollbar-width: none;
+    width: 100%;
+  }
+  #feed::-webkit-scrollbar { display: none; }
+
+  .home-btn {
+    position: fixed; top: 18px; left: 18px; z-index: 20;
+    font-size: 22px; color: #fff; cursor: pointer;
+    background: rgba(0,0,0,0.35); width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  }
+  .home-btn:active { transform: scale(.94); }
+
+  .card {
+    position: relative; height: 100vh; width: 100%;
+    scroll-snap-align: start;
+    background-size: cover; background-position: center;
+    display: flex; align-items: flex-end; overflow: hidden;
+  }
+  .card::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.3) 100%);
+  }
+
+  .text {
+    position: relative; z-index: 2;
+    padding: 0 100px 90px 28px;
+    color: #fff; font-size: 17px; line-height: 1.9;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.7); white-space: pre-wrap;
+  }
+  .time { display: block; margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.7); }
+
+  .actions {
+    position: absolute; right: 14px; bottom: 70px; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+  }
+  .act { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+  .act:active { transform: scale(.9); }
+  .act .icon { font-size: 30px; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.7); line-height: 1; }
+  .act .num { font-size: 12px; color: #fff; margin-top: 4px; text-shadow: 0 1px 6px rgba(0,0,0,0.7); }
+  .act.liked .icon { color: #ff5a5a; }
+  .act.saved .icon { color: #ffd166; }
+
+  .avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 2px solid #fff; object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4); cursor: pointer;
+  }
+
+  .empty-state {
+    height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff; text-align: center; padding: 40px;
+  }
+  .empty-state .big { font-size: 17px; line-height: 2; color: #cfc9bd; }
+
+  /* 个人主页样式不变... */
+  #profilePage {
+    position: fixed; inset: 0; z-index: 40;
+    background: #f7f5f1;
+    transform: translateX(100%); transition: transform .28s;
+    overflow-y: auto;
+  }
+  #profilePage.open { transform: translateX(0); }
+
+  .p-back {
+    position: absolute; top: 16px; left: 16px; z-index: 5;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(0,0,0,0.3); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; cursor: pointer;
+  }
+
+  .p-header {
+    position: relative; height: 220px;
+    background: linear-gradient(160deg, #a8c4e0, #e6d5e8);
+    background-size: cover; background-position: center;
+  }
+  .p-header::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.25));
+  }
+  .p-avatar {
+    position: absolute; left: 20px; bottom: -34px; z-index: 3;
+    width: 84px; height: 84px; border-radius: 50%;
+    border: 3px solid #f7f5f1; align-items: center; justify-content: center;; background: #d8e4d0; display: flex;
+  }
+  .p-name {
+    position: absolute; left: 118px; bottom: 6px; z-index: 3;
+    color: #fff; font-size: 19px; text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  .p-uid {
+    position: absolute; left: 118px; bottom: -18px; z-index: 3;
+    color: rgba(255,255,255,0.9); font-size: 12px; text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+
+  .p-body { padding: 46px 20px 30px; }
+  .p-stats { display: flex; gap: 26px; margin-bottom: 14px; }
+  .p-stats .s { text-align: center; }
+  .p-stats .s .n { font-size: 17px; color: #3a3a34; font-weight: 600; }
+  .p-stats .s .l { font-size: 11px; color: #a8a294; margin-top: 2px; }
+  .p-line { font-size: 13px; color: #8a8578; margin-bottom: 6px; }
+
+  .p-actions { display: flex; gap: 10px; margin: 16px 0 20px; }
+  .p-actions button {
+    flex: 1; border: none; border-radius: 10px;
+    padding: 11px 0; font-size: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .p-actions .close-friend { background: #efeaf7; color: #7a6bb0; }
+  .p-actions .dm { background: #f2efe9; color: #4a4a42; }
+  .p-actions .dm:active { transform: scale(.97); }
+
+  .p-grid-title { font-size: 13px; color: #a8a294; margin-bottom: 10px; }
+  .p-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .p-grid .g-card {
+    position: relative; border-radius: 10px; overflow: hidden;
+    height: 160px; background-size: cover; background-position: center;
+    display: flex; align-items: flex-end;
+  }
+  .p-grid .g-card::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.05) 60%);
+  }
+  .p-grid .g-card .gt {
+    position: relative; z-index: 2; padding: 8px;
+    color: #fff; font-size: 12px; line-height: 1.5;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  #dmPage {
+    position: fixed; inset: 0; z-index: 50;
+    background: #f7f5f1;
+    transform: translateX(100%); transition: transform .28s;
+    display: flex; flex-direction: column;
+  }
+  #dmPage.open { transform: translateX(0); }
+  .dm-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; border-bottom: 1px solid #e6e2da; background: #fbfaf8;
+    flex-shrink: 0;
+  }
+  .dm-head .back { font-size: 22px; color: #7d9b6a; cursor: pointer; padding: 0 6px; line-height: 1; }
+  .dm-head .who { font-size: 15px; color: #4a4a42; }
+  #dmList { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .dm-msg { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 15px; line-height: 1.6; word-break: break-word; }
+  .dm-msg.me { align-self: flex-end; background: #d8e4d0; border-bottom-right-radius: 4px; }
+  .dm-msg.ta { align-self: flex-start; background: #fff; border-bottom-left-radius: 4px; }
+  .dm-foot { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid #e6e2da; background: #fbfaf8; flex-shrink: 0; }
+  .dm-foot input { flex: 1; border: none; outline: none; padding: 11px 16px; border-radius: 20px; font-size: 15px; background: #f2efe9; color: #3a3a34; }
+  .dm-foot button { border: none; background: #a8b89c; color: #fff; padding: 0 20px; border-radius: 20px; font-size: 15px; cursor: pointer; }
+
+  #commentSheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: #fff; border-radius: 18px 18px 0 0;
+    transform: translateY(100%); transition: transform .25s;
+    max-height: 70vh; display: flex; flex-direction: column;
+  }
+  #commentSheet.open { transform: translateY(0); }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 10px; border-bottom: 1px solid #f0ede7; }
+  .sheet-head .t { font-size: 15px; color: #4a4a42; }
+  .sheet-head .close { font-size: 22px; color: #b0aa9c; cursor: pointer; }
+  #commentList { flex: 1; overflow-y: auto; padding: 12px 20px; }
+  .cmsg { font-size: 14px; color: #4a4a42; padding: 8px 0; line-height: 1.6; }
+  .cmsg.me { color: #7d9b6a; }
+  #kindTip { display: none; padding: 8px 20px; font-size: 13px; color: #b58a3a; background: #faf3e3; text-align: center; }
+  #kindTip.show { display: block; }
+  .sheet-foot { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid #f0ede7; }
+  .sheet-foot input { flex: 1; border: none; outline: none; padding: 11px 16px; border-radius: 20px; font-size: 15px; background: #f2efe9; color: #3a3a34; }
+  .sheet-foot button { border: none; background: #a8b89c; color: #fff; padding: 0 20px; border-radius: 20px; font-size: 15px; cursor: pointer; }
+  .not-real { text-align: center; font-size: 11px; color: #c8c2b6; padding: 6px 0 12px; }
+
+  #toast {
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(.9);
+    z-index: 9999; background: rgba(50,50,50,0.92);
+    color: #fff; font-size: 15px; padding: 16px 28px; border-radius: 12px;
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  /* 卡片头像：首字垫底，有图就盖上去 */
+  .av-text { position: relative; overflow: hidden; }
+  .av-text-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* 评论：左边头像 + 右边内容 */
+  .cmsg { display: flex; gap: 8px; align-items: flex-start; }
+  .cavatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    background: #dbe7f8; color: #3f6ea8; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden; cursor: pointer;
+  }
+  .cavatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cmsg .cbody { flex: 1; min-width: 0; }
+  .cmsg.reply .cavatar { width: 26px; height: 26px; font-size: 12px; }
+</style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<div id="toast"></div>
+<div class="home-btn" onclick="safeBack('index.html')">‹</div>
+<div id="feed"></div>
+
+<!-- 个人主页 -->
+<div id="profilePage">
+  <div class="p-back" onclick="closeProfile()">‹</div>
+  <div class="p-header" id="pHeader">
+    <div class="p-avatar" id="pAvatar"></div>
+    <div class="p-name" id="pName"></div>
+    <div class="p-uid" id="pUid"></div>
+  </div>
+  <div class="p-body">
+    <div class="p-stats">
+      <div class="s"><div class="n" id="pLikes"></div><div class="l">获赞</div></div>
+      <div class="s"><div class="n" id="pFollows"></div><div class="l">关注</div></div>
+      <div class="s"><div class="n" id="pFans"></div><div class="l">粉丝</div></div>
+    </div>
+    <div class="p-line" id="pIp"></div>
+    <div class="p-line">他(她)关注了你</div>
+    <div class="p-actions">
+      <button class="close-friend" onclick="goBless()">✈ 去祝福一下ta叭</button>
+      <button class="dm" id="dmActionBtn" onclick="handleDMAction()">✈ 发私信</button>
+    </div>
+    <div class="p-grid-title">作品</div>
+    <div class="p-grid" id="pGrid"></div>
+  </div>
+</div>
+
+<!-- 私信界面 -->
+<div id="dmPage">
+  <div class="dm-head">
+    <div class="back" onclick="closeDM()">‹</div>
+    <div class="who" id="dmWho"></div>
+  </div>
+  <div id="dmList">
+    <div class="dm-msg ta">你好呀</div>
+  </div>
+  <div class="dm-foot">
+    <input id="dmInput" placeholder="发消息…" autocomplete="off" />
+    <button onclick="sendDM()">发</button>
+  </div>
+</div>
+
+<!-- 评论面板 -->
+<div id="commentSheet">
+  <div class="sheet-head">
+    <div class="t">评论</div>
+    <div class="close" onclick="closeComments()">×</div>
+  </div>
+  <div id="kindTip">善语结善缘，恶语伤人心</div>
+  <div id="commentList"></div>
+  <div class="sheet-foot">
+    <input id="cinput" placeholder="说点什么…" autocomplete="off" />
+    <button onclick="sendComment()">发</button>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const feedType = params.get('feed') || 'all';
+const targetId = params.get('id');
+const fromChat = params.get('from') === 'chat';
+
+const feedEl = document.getElementById('feed');
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+// 把后端返回的日记转成页面认识的字段
+function mapDiary(d) {
+  return {
+    id: String(d.id),
+    nick: d.author.nickname || '匿名用户',
+    avatar: (d.author && d.author.avatar) || '',
+    uid: String(d.author.id),
+    ip: '',
+    likes: d.likes || 0,
+    comments: d.comments || 0,
+    saves: d.saves || 0,
+    // 后端返回 isLiked/isSaved/isFollowed，适配层已转成 liked/saved/followed
+    liked: !!d.liked,
+    saved: !!d.saved,
+    followed: !!d.followed,
+    follows: 0,
+    fans: 0,
+    time: (d.day || '').slice(5).replace('-', '.'),
+    text: d.content || '',
+    img: d.cover || '',
+    isMine: !!d.isMine
+  };
+}
+
+function emptyState(text) {
+  feedEl.innerHTML = '<div class="empty-state"><div class="big">' + text + '</div></div>';
+}
+
+async function loadList() {
+  // 详情：先取这一篇；列表：取公开流
+  let first = null;
+  if (targetId) {
+    const r1 = await api('/diary/' + encodeURIComponent(targetId));
+    if (r1.code === 0) first = mapDiary(r1.data);
+    else if (r1.code === 404) { emptyState('内容不存在<br>可能已被删除或设为私密'); return; }
+  }
+
+  const _fromDiscover = params.get('from') === 'discover';
+
+  // ★ 前端从来没用过 feed 参数 ★
+  //   日记页那个「看看 ta 的」跳的是 diary-public.html?feed=follow，
+  //   但这里不管什么 feed 都去拉 /diary/public（全站公开日记），
+  //   所以点进去看到的是所有人，不是好友。
+  let r2;
+  if (feedType === 'follow') {
+    r2 = await api('/diary/feed?feed=follow&size=30');
+  } else {
+    r2 = await api('/diary/public?size=30&excludeMine=1');
+  }
+  let list = (r2.code === 0 && r2.data.list) ? r2.data.list.map(mapDiary) : [];
+
+  // 「看看 ta 的」只看关注的人：后端 follow 流里含自己，这里滤掉
+  if (feedType === 'follow') {
+    list = list.filter(function (d) { return !d.isMine; });
+  }
+
+  // 从发现页进来的，按那边记住的顺序排（没记住的就保持接口顺序）
+  if (_fromDiscover) {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('wx_feed_ids') || '[]');
+      if (saved && saved.length) {
+        const pos = {};
+        saved.forEach(function (id, i) { pos[String(id)] = i; });
+        list.sort(function (a, b) {
+          const pa = pos[String(a.id)] === undefined ? 9999 : pos[String(a.id)];
+          const pb = pos[String(b.id)] === undefined ? 9999 : pos[String(b.id)];
+          return pa - pb;
+        });
+      }
+    } catch (e) {}
+  }
+
+  if (first) {
+    // 记一条浏览记录（自己的日记后端会跳过）
+    api('/view/' + first.id, { method: 'POST' });
+
+    list = list.filter(x => x.id !== first.id);
+    list.unshift(first);
+  }
+  if (!list.length) {
+    emptyState('这里还空着<br>去发现里看看吧');
+    return;
+  }
+
+
+  render(list);
+}
+
+function render(list) {
+  list.forEach(c => {
+    const liked = !!c.liked;
+    const saved = !!c.saved;
+    const followed = !!c.followed;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    if (c.img) card.style.backgroundImage = `url('${c.img}')`;
+    card.dataset.id = c.id;
+    card.dataset.uid = c.uid || '';
+
+    card.innerHTML = `
+      <div class="text">${c.text}<span class="time">${c.time}</span></div>
+      <div class="actions">
+        <span class="avatar av-text">${(c.nick || '匿').slice(0, 1)}${c.avatar ? '<img class="av-text-img" src="' + c.avatar + '" alt="" onerror="this.remove()">' : ''}</span>
+        <div class="act like-act ${liked ? 'liked' : ''}">
+          <div class="icon">${liked ? '♥' : '♡'}</div>
+          <div class="num">${c.likes || 0}</div>
+        </div>
+        <div class="act save-act ${saved ? 'saved' : ''}">
+          <div class="icon">${saved ? '★' : '☆'}</div>
+          <div class="num save-num" data-save-num>${c.saves || 0}</div>
+        </div>
+        <div class="act comment-act">
+          <div class="icon">💬</div>
+          <div class="num comment-num" data-comment-num>${c.comments || 0}</div>
+        </div>
+        <div class="act follow-act">
+          <div class="icon">${followed ? '✓' : '＋'}</div>
+          <div class="num">${followed ? '已关注' : '关注'}</div>
+        </div>
+        <div class="act share-act">
+          <div class="icon">↗</div>
+          <div class="num">转发</div>
+        </div>
+      </div>
+    `;
+    feedEl.appendChild(card);
+  });
+
+  feedEl.querySelectorAll('.avatar').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      openProfileById(el.closest('.card').dataset.id);
+    });
+  });
+
+  feedEl.querySelectorAll('.like-act').forEach(el => {
+    el.addEventListener('click', async e => {
+      e.stopPropagation();
+      const id = el.closest('.card').dataset.id;
+      const res = await api('/interact/toggle', { method: 'POST', body: { diaryId: Number(id), type: 'like' } });
+      if (res.code !== 0) { showToast(res.msg || '操作失败'); return; }
+      el.classList.toggle('liked', res.data.active);
+      el.querySelector('.icon').textContent = res.data.active ? '♥' : '♡';
+      el.querySelector('.num').textContent = res.data.likeCount;
+    });
+  });
+
+  feedEl.querySelectorAll('.save-act').forEach(el => {
+    el.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (el.dataset.busy) return;
+      el.dataset.busy = '1';
+      const wasSaved = el.classList.contains('saved');
+      try {
+      const id = el.closest('.card').dataset.id;
+      const res = await api('/interact/toggle', { method: 'POST', body: { diaryId: Number(id), type: 'favorite' } });
+      if (res.code !== 0) { showToast(res.msg || '操作失败'); return; }
+      el.classList.toggle('saved', res.data.active);
+      el.querySelector('.icon').textContent = res.data.active ? '★' : '☆';
+      var __sn = el.querySelector('[data-save-num]');
+      if (__sn) {
+        var __v = Number(__sn.textContent) || 0;
+        __sn.textContent = String(res.data.favoriteCount != null
+          ? Math.max(0, Number(res.data.favoriteCount) || 0)
+          : Math.max(0, __v + Number(!!res.data.active) - Number(wasSaved)));
+      }
+      } finally { delete el.dataset.busy; }
+    });
+  });
+
+  feedEl.querySelectorAll('.follow-act').forEach(el => {
+    el.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (el.dataset.busy) return;
+      const card = el.closest('.card');
+      const uid = card.dataset.uid;
+      if (!uid) return;
+      el.dataset.busy = '1';
+      const r = await api('/interact/follow/' + uid, { method: 'POST' });
+      delete el.dataset.busy;
+      if (r.code !== 0) { alert(r.msg || '操作失败'); return; }
+      el.querySelector('.icon').textContent = r.data.followed ? '✓' : '＋';
+      el.querySelector('.num').textContent = r.data.followed ? '已关注' : '关注';
+    });
+  });
+
+  feedEl.querySelectorAll('.comment-act').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); openComments(el.closest('.card').dataset.id); });
+  });
+
+  feedEl.querySelectorAll('.share-act').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); openShare(el.closest('.card').dataset.id); });
+  });
+
+  if (list.length) syncInteractState(list[0].id);
+}
+
+async function syncInteractState(id) {
+  const res = await api('/interact/state/' + id);
+  if (res.code !== 0) return;
+  const card = feedEl.querySelector('.card[data-id="' + id + '"]');
+  if (!card) return;
+  const like = card.querySelector('.like-act');
+  const save = card.querySelector('.save-act');
+  if (like) {
+    like.classList.toggle('liked', !!res.data.liked);
+    like.querySelector('.icon').textContent = res.data.liked ? '♥' : '♡';
+    like.querySelector('.num').textContent = res.data.likeCount;
+  }
+  if (save) {
+    save.classList.toggle('saved', !!res.data.favorited);
+    save.querySelector('.icon').textContent = res.data.favorited ? '★' : '☆';
+  }
+}
+
+loadList();
+
+let currentNick = '';
+let currentUserId = '';
+
+async function openProfileById(id) {
+  // ★ 原来查的是 data.js 的假数据（关注数/粉丝数/IP 全是编的）★
+  const rd = await api('/diary/' + encodeURIComponent(id));
+  if (rd.code !== 0 || !rd.data) { alert('打不开这个人的主页'); return; }
+  const d = mapDiary(rd.data);
+  const authorId = d.uid;
+
+  const ru = await api('/user/' + authorId);
+  const u = (ru.code === 0 && ru.data && ru.data.user) ? ru.data.user : {};
+
+  currentNick = u.nickname || d.nick;
+  currentUserId = authorId;
+
+  document.getElementById('pHeader').style.backgroundImage = d.img ? 'url("' + d.img + '")' : 'none';
+  // 头像：有图就铺图，没图就是昵称首字（用 div 才好放字，也不会有破图）
+  const pAv = document.getElementById('pAvatar');
+  pAv.textContent = (currentNick || '匿').charAt(0);
+  if (u.avatar) {
+  pAv.style.backgroundImage = u.avatar ? 'url(' + u.avatar + ')' : 'none';
+    pAv.style.backgroundSize = 'cover';
+    pAv.style.backgroundPosition = 'center';
+  } else {
+    pAv.style.backgroundImage = 'none';
+  }
+
+  document.getElementById('pName').textContent = currentNick;
+  document.getElementById('pUid').textContent = 'ID: ' + (u.uid || '');
+  document.getElementById('pLikes').textContent = u.totalLikes || 0;
+  document.getElementById('pFollows').textContent = u.following || 0;
+  document.getElementById('pFans').textContent = u.fans || 0;
+  document.getElementById('pIp').textContent = 'IP: ' + (u.province || '未知');
+
+  // ta 的公开作品
+  const rl = await api('/diary/feed?feed=all&nick=' + encodeURIComponent(currentNick) + '&size=30');
+  const items = (rl.code === 0 && rl.data && rl.data.list) ? rl.data.list.map(mapDiary) : [];
+
+  const grid = document.getElementById('pGrid');
+  grid.innerHTML = '';
+  items.forEach(function (it) {
+    const g = document.createElement('div');
+    g.className = 'g-card';
+    if (it.img) g.style.backgroundImage = 'url("' + it.img + '")';
+    g.innerHTML = '<div class="gt">' + it.text + '</div>';
+    grid.appendChild(g);
+  });
+
+  const btn = document.getElementById('dmActionBtn');
+  btn.textContent = '✈ 发私信';
+  btn.style.background = '#f2efe9';
+  btn.style.color = '#4a4a42';
+
+  document.getElementById('profilePage').classList.add('open');
+}
+
+function closeProfile() {
+  // 从聊天页点头像进来的，返回聊天页；否则关闭主页浮层
+  if (fromChat) {
+    history.back();
+    return;
+  }
+  document.getElementById('profilePage').classList.remove('open');
+}
+
+function goBless() {
+  location.href = 'bless.html?to=' + encodeURIComponent(currentNick) + '&uid=' + encodeURIComponent(currentUserId || '');
+}
+
+function handleDMAction() {
+  // 后端不要求先关注才能私信，直接进聊天页
+  if (!currentUserId) return;
+  openDM();
+}
+
+function openDM() {
+  // ★ 原来的假面板只往页面上贴字，对方收不到 ★
+  //   现在直接跳真正的私信页（接 /api/message，还会自动刷新）
+  if (!currentUserId) return;
+  location.href = 'friend-chat.html?userId=' + encodeURIComponent(currentUserId);
+}
+
+function closeDM() {
+  document.getElementById('dmPage').classList.remove('open');
+}
+
+function sendDM() {
+  const input = document.getElementById('dmInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const list = document.getElementById('dmList');
+  const div = document.createElement('div');
+  div.className = 'dm-msg me';
+  div.textContent = text;
+  list.appendChild(div);
+  input.value = '';
+  list.scrollTop = list.scrollHeight;
+}
+document.getElementById('dmInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendDM();
+});
+
+const sheet = document.getElementById('commentSheet');
+const cinput = document.getElementById('cinput');
+const kindTip = document.getElementById('kindTip');
+const commentList = document.getElementById('commentList');
+
+let commentDiaryId = 0;
+
+function commentHtml(c) {
+  const who = c.isMine ? '我' : (c.nick || '匿名');
+  return who + '：' + c.content;
+}
+
+async function loadComments() {
+  commentList.innerHTML = '<div class="cmsg">加载中…</div>';
+  const r = await api('/comment/diary/' + commentDiaryId + '?size=50');
+  const list = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+
+  commentList.innerHTML = '';
+  if (!list.length) {
+    commentList.innerHTML = '<div class="cmsg" data-empty>还没有评论，来说第一句吧</div>';
+    return;
+  }
+  list.forEach(function (c) {
+    const div = document.createElement('div');
+    div.className = 'cmsg' + (c.isMine ? ' me' : '');
+    div.textContent = commentHtml(c);
+    commentList.appendChild(div);
+  });
+  commentList.scrollTop = commentList.scrollHeight;
+}
+
+
+// ===== 转发：挑一个关注的人，把日记发给 ta =====
+async function openShare(diaryId) {
+  const rd = await api('/diary/' + encodeURIComponent(diaryId));
+  if (rd.code !== 0 || !rd.data) { alert('这篇打不开了'); return; }
+  const text = (rd.data.content || '').slice(0, 60);
+
+  const r = await api('/interact/my-follows');
+  const users = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+  if (!users.length) { alert('还没有关注的人。去发现页关注一个，再回来转发。'); return; }
+
+  const mask = document.createElement('div');
+  mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:99;display:flex;align-items:flex-end;';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;width:100%;border-radius:16px 16px 0 0;padding:16px 16px 28px;max-height:60vh;overflow:auto;';
+  box.innerHTML = '<div style="font-size:15px;color:#4a4a42;margin-bottom:10px;">转发给</div>';
+
+  users.forEach(function (u) {
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:13px 4px;border-bottom:1px solid #f0ede7;font-size:15px;color:#3a3a34;cursor:pointer;';
+    row.textContent = u.nick || ('用户' + u.userId);
+    row.onclick = async function () {
+      row.textContent = u.nick + '（发送中…）';
+      const body = { toUserId: u.userId, content: '分享一篇日记：' + text + (text.length >= 60 ? '…' : '') };
+      const r2 = await api('/message/send', { method: 'POST', body: body });
+      if (r2.code !== 0) { alert(r2.msg || '转发失败'); row.textContent = u.nick; return; }
+      mask.remove();
+      alert('已转发给 ' + (u.nick || 'ta'));
+    };
+    box.appendChild(row);
+  });
+
+  mask.appendChild(box);
+  mask.onclick = function (e) { if (e.target === mask) mask.remove(); };
+  document.body.appendChild(mask);
+}
+
+function openComments(id) {
+  commentDiaryId = id || 0;
+  sheet.classList.add('open');
+  cinput.value = '';
+  kindTip.classList.remove('show');
+  commentList.innerHTML = '';
+  if (commentDiaryId) loadComments();
+}
+function closeComments() { sheet.classList.remove('open'); }
+
+cinput.addEventListener('input', () => {
+  if (cinput.value.trim().length > 0) kindTip.classList.add('show');
+  else kindTip.classList.remove('show');
+});
+
+
+// 优先使用服务端计数，避免有新回复或删除时本地数字漂移。
+function __bumpCommentNum(diaryId, count) {
+  var card = document.querySelector('.card[data-id="' + diaryId + '"]');
+  if (!card) return;
+  var el = card.querySelector('[data-comment-num]');
+  if (!el) return;
+  el.textContent = String(count != null ? Math.max(0, Number(count) || 0) : (Number(el.textContent) || 0) + 1);
+}
+
+async function sendComment() {
+  const text = cinput.value.trim();
+  if (!text || !commentDiaryId) return;
+
+  cinput.value = '';
+  kindTip.classList.remove('show');
+
+  const r = await api('/comment', { method: 'POST', body: { diaryId: commentDiaryId, content: text } });
+  if (r.code !== 0) {
+    cinput.value = text;
+    alert(r.msg || '评论失败');
+    return;
+  }
+
+  const empty = commentList.querySelector('[data-empty]');
+  if (empty) empty.remove();
+
+  const c = r.data && r.data.comment;
+  const div = document.createElement('div');
+  div.className = 'cmsg me';
+  div.textContent = commentHtml(c || { isMine: true, content: text });
+  commentList.appendChild(div);
+  commentList.scrollTop = commentList.scrollHeight;
+  __bumpCommentNum(commentDiaryId, r.data && r.data.commentCount);
+}
+cinput.addEventListener('keydown', e => { if (e.key === 'Enter') sendComment(); });
+
+// 从聊天页点头像进来时，直接打开这个人的主页
+if (targetId && params.get('profile') === '1') {
+  setTimeout(function () { openProfileById(targetId); }, 50);
+}
+</script>
+<script>
+// ===== 评论区：支持回复（自动 @ 对方） =====
+// 这段会追加到 diary-public.html 脚本末尾，同名函数覆盖前面的定义。
+//
+// 后端本来就支持两级评论：
+//   POST /api/comment { diaryId, content, parentId }   ← parentId 就是回复
+//   GET  /api/comment/diary/:id                         ← 每条带 replies[]
+// 前端之前只渲染了平铺的一层，所以看起来不能回复。
+
+let __replyTarget = null;   // { id, nick }
+let __diaryAuthorNick = '';  // 这篇日记的作者昵称（@ 的时候要能选到 ta）
+
+// ---------- 界面：回复提示条 ----------
+function __ensureReplyChip() {
+  let chip = document.getElementById('replyChip');
+  if (chip) return chip;
+
+  chip = document.createElement('div');
+  chip.id = 'replyChip';
+  chip.hidden = true;
+  chip.style.cssText = [
+    'display:none',
+    'align-items:center',
+    'gap:8px',
+    'margin:0 16px 8px',
+    'padding:8px 12px',
+    'border-radius:10px',
+    'background:#eef3ea',
+    'color:#5f7a4f',
+    'font-size:13px',
+  ].join(';');
+
+  const text = document.createElement('span');
+  text.id = 'replyChipText';
+  text.style.flex = '1';
+
+  const close = document.createElement('span');
+  close.textContent = '×';
+  close.style.cssText = 'cursor:pointer;font-size:16px;line-height:1;padding:0 4px;';
+  close.onclick = function () { __clearReply(); };
+
+  chip.appendChild(text);
+  chip.appendChild(close);
+
+  const foot = document.querySelector('#commentSheet .sheet-foot');
+  if (foot && foot.parentNode) {
+    foot.parentNode.insertBefore(chip, foot);
+  } else {
+    document.getElementById('commentSheet').appendChild(chip);
+  }
+  return chip;
+}
+
+function __setReply(c) {
+  // 回复的回复，仍然挂到最初那条一级评论下面（和后端规则一致）
+  __replyTarget = { id: c.parentId ? c.parentId : c.id, nick: c.nick || 'ta' };
+
+  const chip = __ensureReplyChip();
+  document.getElementById('replyChipText').textContent = '回复 @' + __replyTarget.nick;
+  chip.style.display = 'flex';
+
+  const input = document.getElementById('cinput');
+  if (input) {
+    input.placeholder = '回复 @' + __replyTarget.nick + '…';
+    input.focus();
+  }
+}
+
+function __clearReply() {
+  __replyTarget = null;
+  const chip = document.getElementById('replyChip');
+  if (chip) chip.style.display = 'none';
+  const input = document.getElementById('cinput');
+  if (input) input.placeholder = '说点什么…';
+}
+
+// 当前登录用户的昵称（用来判断"是不是回复自己"）
+function __myNick() {
+  try {
+    const u = JSON.parse(localStorage.getItem('wg_user') || 'null');
+    return (u && u.nickname) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// ---------- 渲染 ----------
+function __commentRow(c, isReply) {
+  const row = document.createElement('div');
+  row.className = 'cmsg' + (c.isMine ? ' me' : '') + (isReply ? ' reply' : '');
+  row.style.cssText = isReply
+    ? 'padding-left:22px;font-size:13px;opacity:.92'
+    : '';
+
+  // 头像：点一下进对方主页（自己那条点了没意义，也照样能进自己的主页）
+  const av = document.createElement('span');
+  av.className = 'cavatar';
+  av.textContent = String(c.isMine ? '我' : (c.nick || '匿')).charAt(0);  // 这里不能引用下面的 who：const 还没初始化（TDZ）
+  if (c.avatar) {
+    const img = document.createElement('img');
+    img.src = c.avatar;
+    img.alt = '';
+    img.onerror = function () { this.remove(); };
+    av.appendChild(img);
+  }
+  if (c.userId) {
+    av.onclick = function (e) {
+      e.stopPropagation();
+      location.href = 'diary-public.html?profileUserId=' + encodeURIComponent(c.userId);
+    };
+  }
+
+  const body = document.createElement('span');
+  body.className = 'ctext cbody';
+
+  const who = c.isMine ? '我' : (c.nick || '匿名');
+  // 回复自己那条评论时不显示 @（对方就是自己，写出来很怪）
+  const at = (c.replyTo && c.replyTo.nick && c.replyTo.nick !== __myNick())
+    ? ('回复 @' + c.replyTo.nick + '：')
+    : '';
+  body.textContent = who + '：' + at + c.content;
+
+  const act = document.createElement('span');
+  act.className = 'creply';
+  act.textContent = '回复';
+  act.style.cssText = 'margin-left:8px;font-size:12px;color:#8aa87c;cursor:pointer;white-space:nowrap;';
+  act.onclick = function (e) {
+    e.stopPropagation();
+    __setReply(c);
+  };
+
+  body.appendChild(act);
+
+  // ---------- 举报这条评论 ----------
+  //  自己的评论不显示（没人会举报自己）。
+  //  真正弹层由 report-action.js 提供（window.__reportComment），
+  //  这里只负责放一个入口，避免两处各写一套 UI。
+  // 不在这里判断 __reportComment 是否存在：评论区可能是页面刚加载时就渲染的，
+  // 而注入的举报脚本在最后才跑，判断早了按钮就不出现。放到点击时再判断。
+  if (!c.isMine) {
+    const more = document.createElement('span');
+    more.className = 'cmore';
+    more.textContent = '⋯';
+    more.title = '举报这条评论';
+    more.style.cssText = 'margin-left:6px;font-size:14px;color:#b6b0a4;cursor:pointer;'
+      + 'white-space:nowrap;line-height:1;';
+    more.onclick = function (e) {
+      e.stopPropagation();
+      if (typeof window.__reportComment === 'function') window.__reportComment(c.id, c.nick);
+      else alert('举报功能还没加载好，刷新一下再试');
+    };
+    body.appendChild(more);
+  }
+
+  row.appendChild(av);
+  row.appendChild(body);
+
+  return row;
+}
+
+async function loadComments() {
+  const commentList = document.getElementById('commentList');
+  const diaryId = commentDiaryId;
+  window.__commentLoadSeq = (window.__commentLoadSeq || 0) + 1;
+  const seq = window.__commentLoadSeq;
+  commentList.innerHTML = '<div class="cmsg">加载中…</div>';
+
+  const r = await api('/comment/diary/' + diaryId + '?size=50');
+  if (diaryId !== commentDiaryId || seq !== window.__commentLoadSeq) return;
+  if (r.code !== 0) {
+    commentList.textContent = r.msg || '评论加载失败，请稍后重试';
+    return;
+  }
+  const list = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+
+  commentList.innerHTML = '';
+  if (!list.length) {
+    commentList.innerHTML = '<div class="cmsg" data-empty>还没有评论，来说第一句吧</div>';
+    return;
+  }
+
+  list.forEach(function (c) {
+    commentList.appendChild(__commentRow(c, false));
+    (c.replies || []).forEach(function (rep) {
+      commentList.appendChild(__commentRow(rep, true));
+    });
+  });
+
+  commentList.scrollTop = commentList.scrollHeight;
+}
+
+// 打开评论面板时顺手把回复条准备好
+const __origOpenComments = openComments;
+openComments = function (id) {
+  __clearReply();
+  __origOpenComments(id);
+  __ensureReplyChip();
+
+  // 顺手记下作者昵称：@ 的时候要能选到 ta
+  if (id) {
+    api('/diary/' + id).then(function (r) {
+      if (r.code === 0 && r.data) {
+        const d = r.data.diary || r.data;
+        __diaryAuthorNick = (d.author && d.author.nickname) || '';
+      }
+    });
+  }
+};
+
+// ---------- 发送 ----------
+let __commentSending = false;
+async function sendComment() {
+  const input = document.getElementById('cinput');
+  const commentList = document.getElementById('commentList');
+  const text = (input.value || '').trim();
+  if (!text || !commentDiaryId || __commentSending) return;
+  const diaryId = commentDiaryId;
+  __commentSending = true;
+
+  input.value = '';
+
+  const body = { diaryId: diaryId, content: text };
+  if (__replyTarget) body.parentId = __replyTarget.id;
+
+  try {
+  const r = await api('/comment', { method: 'POST', body: body });
+
+  if (r.code !== 0) {
+    if (diaryId === commentDiaryId && !input.value) input.value = text;
+    alert(r.msg || '评论失败');
+    return;
+  }
+
+  __bumpCommentNum(diaryId, r.data && r.data.commentCount);
+  if (diaryId !== commentDiaryId) return;
+  __clearReply();
+  // 重新拉一遍，层级/时间才对得上（刚发的回复要挂在对应评论下面）
+  await loadComments();
+  commentList.scrollTop = commentList.scrollHeight;
+  } finally { __commentSending = false; }
+}
+
+// ===== @ 别人：选一个评论区里的人，把「@昵称 」插进输入框 =====
+//   ⚠️ 后端会解析正文里的 @昵称 并给那个人发互动消息（type=mention），
+//      所以这里只需要把人名插进去，不用额外调接口。
+
+let __atCandidates = [];   // 可 @ 的昵称（日记作者 + 评论过的人）
+
+function __refreshAtCandidates(authorNick) {
+  const set = [];
+  const push = (n) => {
+    if (!n) return;
+    if (set.indexOf(n) === -1) set.push(n);
+  };
+  push(authorNick);
+  document.querySelectorAll('#commentList .cmsg').forEach(function (row) {
+    const t = row.querySelector('.ctext');
+    if (!t) return;
+    // 文本形如「小海：内容」，取冒号前那段
+    const m = t.textContent.match(/^([^：:]{1,20})[：:]/);
+    if (m) push(m[1]);
+  });
+  __atCandidates = set.filter(function (n) { return n && n !== '我'; });
+}
+
+function __ensureAtPanel() {
+  let panel = document.getElementById('atPanel');
+  if (panel) return panel;
+
+  panel = document.createElement('div');
+  panel.id = 'atPanel';
+  panel.hidden = true;
+  panel.style.cssText = [
+    'display:none',
+    'flex-wrap:wrap',
+    'gap:8px',
+    'margin:0 16px 8px',
+    'padding:10px 12px',
+    'border-radius:10px',
+    'background:#f7f5f1',
+    'max-height:120px',
+    'overflow-y:auto',
+  ].join(';');
+
+  const foot = document.querySelector('#commentSheet .sheet-foot');
+  if (foot && foot.parentNode) foot.parentNode.insertBefore(panel, foot);
+  return panel;
+}
+
+async function __openAtPanel() {
+  const panel = __ensureAtPanel();
+
+  // ★ 只能 @ 好友（我关注的人）★
+  //   后端也会再拦一次 —— 手动打 @某人 绕不过去。
+  panel.innerHTML = '<span style="font-size:13px;color:#a8a294;">加载中…</span>';
+  panel.style.display = 'flex';
+  panel.hidden = false;
+
+  const r = await api('/interact/my-follows');
+  const friends = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+
+  panel.innerHTML = '';
+
+  if (!friends.length) {
+    const tip = document.createElement('span');
+    tip.textContent = '还没有好友。去发现页关注一个人，就能 @ ta 了';
+    tip.style.cssText = 'font-size:13px;color:#a8a294;line-height:1.6;';
+    panel.appendChild(tip);
+    return;
+  }
+
+  friends.forEach(function (u) {
+    const nick = u.nick || '';
+    if (!nick) return;
+
+    const chip = document.createElement('span');
+    chip.textContent = '@' + nick;
+    chip.style.cssText = 'padding:6px 12px;border-radius:14px;background:#eef3ea;'
+      + 'color:#5f7a4f;font-size:13px;cursor:pointer;';
+    chip.onclick = function () {
+      const input = document.getElementById('cinput');
+      const prefix = (input.value && !/\s$/.test(input.value)) ? ' ' : '';
+      input.value = input.value + prefix + '@' + nick + ' ';
+      input.focus();
+      panel.style.display = 'none';
+      panel.hidden = true;
+    };
+    panel.appendChild(chip);
+  });
+}
+
+// 在输入框那一行加一个 @ 按钮
+(function __injectAtButton() {
+  const foot = document.querySelector('#commentSheet .sheet-foot');
+  if (!foot || document.getElementById('atBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'atBtn';
+  btn.type = 'button';
+  btn.textContent = '@';
+  btn.title = '提到一个人';
+  btn.style.cssText = 'border:none;background:#eef3ea;color:#5f7a4f;'
+    + 'padding:0 14px;border-radius:20px;font-size:17px;cursor:pointer;';
+  btn.onclick = function () { __openAtPanel(); };
+  foot.insertBefore(btn, foot.firstChild);
+})();
+
+
+// ===== 个人主页：支持直接按 userId 打开 =====
+// 追加到 diary-public.html 脚本末尾。
+//
+// 原来的 openProfileById(diaryId) 只能"从某篇日记反查作者"，
+// 好友列表里是 userId，没日记 id 就打不开主页。
+// 这里补一个 openProfileByUserId(userId)，并让页面支持
+//   diary-public.html?profileUserId=12
+// 直接打开某个人的主页。
+
+// 这个小页面没有全局的 esc()，自己带一个
+function __esc(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// 把"填浮层"这部分单独抽出来，两种入口共用
+function __fillProfile(u, coverImg, nickFallback) {
+  currentNick = u.nickname || nickFallback || 'ta';
+  currentUserId = u.id;
+
+  const header = document.getElementById('pHeader');
+  if (header) header.style.backgroundImage = coverImg ? "url('" + coverImg + "')" : 'none';
+
+  const pAv = document.getElementById('pAvatar');
+  if (pAv) {
+    // ★ 头像是背景图，字是元素自己的文本 ★
+    //   两个都留着的话，字会叠在图片上（看起来像"头像上印了个字"）。
+    //   做法：先把首字放上去，等图片真的加载成功再清掉文字换成图。
+    pAv.textContent = String(currentNick || '匿').charAt(0);
+    pAv.style.backgroundImage = 'none';
+
+    if (u.avatar) {
+      const probe = new Image();
+      probe.onload = function () {
+        pAv.textContent = '';                    // 图片能显示，就把字撤掉
+        pAv.style.backgroundImage = "url('" + u.avatar + "')";
+        pAv.style.backgroundSize = 'cover';
+        pAv.style.backgroundPosition = 'center';
+      };
+      probe.onerror = function () {
+        // 图挂了就保持首字，别给人一个空圈
+      };
+      probe.src = u.avatar;
+    }
+  }
+
+  document.getElementById('pName').textContent = currentNick;
+  document.getElementById('pUid').textContent = 'ID: ' + (u.uid || '');
+  document.getElementById('pLikes').textContent = u.totalLikes || 0;
+  document.getElementById('pFollows').textContent = u.following || 0;
+  document.getElementById('pFans').textContent = u.fans || 0;
+  document.getElementById('pIp').textContent = 'IP: ' + (u.province || '未知');
+
+  const btn = document.getElementById('dmActionBtn');
+  if (btn) {
+    btn.textContent = '✈ 发私信';
+    btn.style.background = '#f2efe9';
+    btn.style.color = '#4a4a42';
+  }
+}
+
+// 拉这个人写过的公开日记，铺到底部格子里
+async function __fillProfileGrid(nick) {
+  const grid = document.getElementById('pGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const rl = await api('/diary/feed?feed=all&nick=' + encodeURIComponent(nick) + '&size=30');
+  const items = (rl.code === 0 && rl.data && rl.data.list) ? rl.data.list.map(mapDiary) : [];
+
+  items.forEach(function (it) {
+    const g = document.createElement('div');
+    g.className = 'g-card';
+    if (it.img) g.style.backgroundImage = "url('" + it.img + "')";
+    g.innerHTML = '<div class="gt">' + __esc(it.text || '') + '</div>';
+    g.onclick = function () {
+      // ★ 主页模式下不要先 closeProfile ★
+      //   那样会先 history.back()（回好友列表），紧接着又跳详情页，
+      //   两个导航打架，表现就是点了没反应或来回抖。
+      if (!__profileOnly) closeProfile();
+      location.href = 'diary-public.html?id=' + it.id;
+    };
+    grid.appendChild(g);
+  });
+}
+
+async function openProfileByUserId(userId) {
+  const ru = await api('/user/' + userId);
+  if (ru.code !== 0 || !ru.data || !ru.data.user) {
+    alert('打不开这个人的主页');
+    return;
+  }
+  const u = ru.data.user;
+
+  // 封面用 ta 最新一篇日记的图，没有就不放
+  let cover = '';
+  const rl = await api('/diary/feed?feed=all&nick=' + encodeURIComponent(u.nickname || '') + '&size=1');
+  if (rl.code === 0 && rl.data && rl.data.list && rl.data.list.length) {
+    const d = mapDiary(rl.data.list[0]);
+    cover = d.img || '';
+  }
+
+  __fillProfile(u, cover, u.nickname);
+  await __fillProfileGrid(currentNick);
+  document.getElementById('profilePage').classList.add('open');
+}
+
+// 原来按日记 id 打开的逻辑也改成走同一套填充，避免两处样式不一致
+async function openProfileById(id) {
+  const rd = await api('/diary/' + encodeURIComponent(id));
+  if (rd.code !== 0 || !rd.data) { alert('打不开这个人的主页'); return; }
+
+  const d = mapDiary(rd.data);
+  const authorId = d.uid;
+
+  const ru = await api('/user/' + authorId);
+  const u = (ru.code === 0 && ru.data && ru.data.user) ? ru.data.user : {};
+
+  __fillProfile(u, d.img, d.nick);
+  await __fillProfileGrid(currentNick);
+  document.getElementById('profilePage').classList.add('open');
+}
+
+// 页面带 ?profileUserId= 时，直接当"个人主页页"用
+//   ★ 背后的日记流要先藏掉 ★
+//   不然会先显示一堆别人的日记卡片，过半秒主页浮层才滑进来，看着像跳了两次。
+var __profileOnly = false;
+
+(function __maybeOpenByUserId() {
+  const v = new URLSearchParams(location.search).get('profileUserId');
+  if (!v) return;
+
+  __profileOnly = true;
+
+  document.documentElement.style.background = '#f7f5f1';
+  document.body.style.background = '#f7f5f1';
+
+  const feed = document.getElementById('feed');
+  if (feed) feed.style.visibility = 'hidden';
+
+  const homeBtn = document.querySelector('.home-btn');
+  if (homeBtn) homeBtn.style.display = 'none';
+
+  setTimeout(function () {
+    openProfileByUserId(v).catch(function () {
+      location.replace('index.html');
+    });
+  }, 60);
+})();
+
+// 关闭：这种模式下背后没有日记流可看，直接回上一页
+const __origCloseProfile = closeProfile;
+closeProfile = function () {
+  if (__profileOnly) {
+    if (history.length > 1) { history.back(); }
+    else { location.replace('index.html'); }
+    return;
+  }
+  __origCloseProfile();
+};
+
+// ===== 转发：重写一版，反馈全部走页面内提示 =====
+// 原来是 alert()：嵌在别的页面里（sandbox iframe）会被浏览器拦掉，
+// 表现就是"点了没反应"。这里改成页面里的浮层提示。
+// 另外"还没关注任何人"也做成可点的引导，不再是一句干巴巴的 alert。
+
+function __shareToast(msg) {
+  const t = document.createElement('div');
+  t.id = '__shareToast';
+  t.textContent = msg;
+  t.style.cssText = [
+    'position:fixed', 'left:50%', 'bottom:90px', 'transform:translateX(-50%)',
+    'background:rgba(58,58,52,.92)', 'color:#fff', 'font-size:14px',
+    'padding:10px 18px', 'border-radius:20px', 'z-index:200',
+    'max-width:80%', 'text-align:center', 'line-height:1.5',
+    'transition:opacity .3s', 'opacity:1'
+  ].join(';');
+  document.body.appendChild(t);
+  setTimeout(function () {
+    t.style.opacity = '0';
+    setTimeout(function () { t.remove(); }, 320);
+  }, 1600);
+}
+
+async function openShare(diaryId) {
+  const rd = await api('/diary/' + encodeURIComponent(diaryId));
+  if (rd.code !== 0 || !rd.data) { __shareToast('这篇打不开了'); return; }
+  const text = ((rd.data.content || rd.data.text) || '').slice(0, 60);
+
+  const r = await api('/interact/my-follows');
+  const users = (r.code === 0 && r.data && r.data.list) ? r.data.list : [];
+
+  // 底部弹出层
+  const mask = document.createElement('div');
+  mask.id = '__shareMask';
+  mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:150;display:flex;align-items:flex-end;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;width:100%;border-radius:16px 16px 0 0;padding:16px 16px 28px;max-height:60vh;overflow:auto;';
+
+  if (!users.length) {
+    box.innerHTML = '<div style="font-size:15px;color:#4a4a42;margin-bottom:6px;">还没有关注的人</div>'
+      + '<div style="font-size:13px;color:#9d977f;margin-bottom:16px;">转发只能发给关注的人，先去发现里关注一个吧</div>'
+      + '<div id="__goDiscover" style="text-align:center;padding:12px;border-radius:12px;background:#eef3ea;color:#5f7a4f;font-size:15px;cursor:pointer;">去发现看看</div>';
+    mask.appendChild(box);
+    mask.onclick = function (e) { if (e.target === mask) mask.remove(); };
+    document.body.appendChild(mask);
+    document.getElementById('__goDiscover').onclick = function () { location.href = 'discover.html'; };
+    return;
+  }
+
+  box.innerHTML = '<div style="font-size:15px;color:#4a4a42;margin-bottom:10px;">转发给</div>';
+
+  users.forEach(function (u) {
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:13px 4px;border-bottom:1px solid #f0ede7;font-size:15px;color:#3a3a34;cursor:pointer;';
+    row.textContent = u.nick || ('用户' + u.userId);
+    row.onclick = async function () {
+      if (row.dataset.busy) return;
+      row.dataset.busy = '1';
+      row.textContent = (u.nick || 'ta') + '（发送中…）';
+
+      // ★ 带上日记 id ★
+      //   接收方靠这个标记渲染成可点的卡片，点一下直接跳去看。
+      const body = { toUserId: u.userId, content: '【分享日记#' + diaryId + '】' + text + (text.length >= 60 ? '…' : '') };
+      const r2 = await api('/message/send', { method: 'POST', body: body });
+
+      delete row.dataset.busy;
+      if (r2.code !== 0) {
+        row.textContent = u.nick || 'ta';
+        __shareToast(r2.msg || '转发失败，再试一次');
+        return;
+      }
+      mask.remove();
+      __shareToast('已转发给 ' + (u.nick || 'ta'));
+    };
+    box.appendChild(row);
+  });
+
+  mask.appendChild(box);
+  mask.onclick = function (e) { if (e.target === mask) mask.remove(); };
+  document.body.appendChild(mask);
+}
+
+</script>
+<script>
+function safeBack(fallback) {
+  try {
+    // 从本站别的页面进来的，才有"上一页"可回
+    if (document.referrer && document.referrer.indexOf(location.host) >= 0) {
+      history.back();
+      return;
+    }
+  } catch (e) {}
+  // 直接打开 / 刷新：兜底回指定页面
+  location.replace(fallback || 'index.html');
+}
+</script>
+<script id="__sessionGuard">
+// ============================================================
+//  登录状态心跳（session guard）
+//
+//  问题：手机登录把电脑顶下线之后，电脑那边不会立刻知道 ——
+//        它不主动问后端，页面就一直显示着（要手动刷新才跳登录页）。
+//
+//  做法：凡是需要登录的页面，每 20 秒问一次 /api/auth/me。
+//        如果账号被顶了，后端返回 401，api.js 统一处理：
+//        清 token + 跳登录页（并说明"账号已在别处登录"）。
+//
+//  细节：
+//    · 没 token（游客）不问，省流量
+//    · 页面在后台（切到别的标签页）不轮询，切回来立刻问一次
+//    · 登录页自己不跑（本来就在登录页）
+// ============================================================
+(function () {
+  var POLL_MS = 10000;
+  var hidden = false;
+
+  function hasToken() {
+    try { return !!localStorage.getItem('wg_token'); } catch (e) { return false; }
+  }
+
+  function ping() {
+    if (hidden || !hasToken()) return;
+    if (typeof api !== 'function') return;
+    // silent401 = false：一旦 401，api.js 会清 token 并跳登录页
+    try { api('/auth/me'); } catch (e) { /* 忽略 */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    hidden = document.hidden;
+    if (!hidden) ping();          // 从后台切回来，立刻确认一次
+  });
+
+  setInterval(ping, POLL_MS);
+
+  // 页面刚打开先问一次（进首页时如果票已经失效，立刻就能发现）
+  setTimeout(ping, 1500);
+})();
+
+</script>
+<script>// ============================================================
+//  举报入口（日记详情页 / 他人主页）
+//
+//  之前后端有 POST /api/report 和 GET /api/report/mine，
+//  但前端没有任何地方能点 —— 用户根本找不到举报。这里补入口：
+//    · 普通日记页：右上角「⋯」→ 举报这篇日记
+//    · 他人主页模式（?profileUserId=）：→ 举报这个用户
+//
+//  举报理由做成固定几项，避免用户手打一堆没用的字，
+//  也方便后台按类型统计。
+// ============================================================
+(function () {
+  if (typeof api !== 'function') return;
+
+  var REASONS = [
+    { v: '广告引流', t: '广告 / 留联系方式' },
+    { v: '诈骗', t: '诈骗 / 刷单 / 网贷' },
+    { v: '辱骂攻击', t: '辱骂、人身攻击' },
+    { v: '违法违规', t: '违法违规内容' },
+    { v: '不适合这里', t: '不适合出现在这个社区' },
+    { v: '其他', t: '其他（补充说明）' }
+  ];
+
+
+  // 提示：不同页面导出的函数名不一样（日记详情页叫 showToast），
+  // 这里做个兼容，避免"举报成功了但什么都没弹"。
+  function tip(msg) {
+    if (typeof showToast === 'function') { showToast(msg); return; }
+    if (typeof toast === 'function') { toast(msg); return; }
+    var el = document.getElementById('__reportTip');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '__reportTip';
+      el.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);'
+        + 'background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:10px;'
+        + 'font-size:14px;z-index:10000;transition:opacity .2s;';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.style.opacity = '0'; }, 1600);
+  }
+
+  // ---------- 目标判定 ----------
+  function target() {
+    var sp = new URLSearchParams(location.search);
+    // 他人主页模式：举报用户
+    if (sp.get('profileUserId')) {
+      var uid = Number(sp.get('profileUserId'));
+      var me = null;
+      try { me = JSON.parse(localStorage.getItem('wg_user') || 'null'); } catch (e) {}
+      if (me && Number(me.id) === uid) return 'self';   // 自己的主页，不给举报
+      return { type: 'user', id: uid, label: '这个用户' };
+    }
+    // 日记详情：举报日记
+    if (sp.get('id')) {
+      return { type: 'diary', id: Number(sp.get('id')), label: '这篇日记' };
+    }
+    return null;
+  }
+
+  // ---------- 弹窗 ----------
+  function openSheet() {
+    var tg = target();
+    if (tg === 'self') { tip('这是你自己的主页'); return; }
+    if (!tg || !tg.id) { tip('这里没有可举报的内容'); return; }
+    openSheetFor(tg);
+  }
+
+  function openSheetFor(tg) {
+    var old = document.getElementById('__reportMask');
+    if (old) old.remove();
+
+    var mask = document.createElement('div');
+    mask.id = '__reportMask';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;'
+      + 'display:flex;align-items:flex-end;justify-content:center;';
+    mask.innerHTML =
+      '<div style="width:100%;max-width:520px;background:#fbfaf8;border-radius:18px 18px 0 0;padding:18px 18px 22px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+      + '<b style="font-size:16px;color:#4a4a42;">举报' + tg.label + '</b>'
+      + '<span style="color:#a8a294;font-size:13px;cursor:pointer;" data-close>取消</span>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#b0aa9c;margin-bottom:14px;">举报会提交给管理员，被举报人不会知道是谁举报的</div>'
+      + REASONS.map(function (r) {
+          return '<div data-reason="' + r.v + '" style="padding:13px 14px;margin-bottom:8px;background:#f3f0ea;'
+            + 'border-radius:12px;font-size:14px;color:#4a4a42;cursor:pointer;">' + r.t + '</div>';
+        }).join('')
+      + '</div>';
+
+    document.body.appendChild(mask);
+    mask.addEventListener('click', function (e) {
+      if (e.target === mask || e.target.hasAttribute('data-close')) { mask.remove(); return; }
+      var cell = e.target.closest('[data-reason]');
+      if (!cell) return;
+      submit(tg, cell.getAttribute('data-reason'), mask);
+    });
+  }
+
+  async function submit(tg, reason, mask) {
+    mask.innerHTML = '<div style="width:100%;max-width:520px;background:#fbfaf8;border-radius:18px 18px 0 0;'
+      + 'padding:34px 18px;text-align:center;color:#8a8578;font-size:14px;">正在提交…</div>';
+    var r = await api('/report', { method: 'POST', body: { targetType: tg.type, targetId: tg.id, reason: reason } });
+    mask.remove();
+    if (r.code === 0) tip('已提交，我们会尽快处理');
+    else tip(r.msg || '提交失败');
+  }
+
+  // ---------- 供评论区调用：举报某条评论 ----------
+  //  评论区自己不去写弹层，统一走这里，两处只有一套 UI。
+  window.__reportComment = function (commentId, nick) {
+    if (!commentId) return;
+    openSheetFor({ type: 'comment', id: Number(commentId), label: '「' + (nick || '匿名') + '」的评论' });
+  };
+
+  // ---------- 右上角入口 ----------
+  // 自己的主页不显示举报按钮（点了也只会提示"这是你自己的主页"）
+  function isSelfProfile() {
+    var sp = new URLSearchParams(location.search);
+    if (!sp.get('profileUserId')) return false;
+    var me = null;
+    try { me = JSON.parse(localStorage.getItem('wg_user') || 'null'); } catch (e) {}
+    return !!(me && Number(me.id) === Number(sp.get('profileUserId')));
+  }
+
+  function addButton() {
+    if (document.getElementById('__reportBtn')) return;
+    if (isSelfProfile()) return;
+    var b = document.createElement('div');
+    b.id = '__reportBtn';
+    b.textContent = '⋯';
+    b.title = '举报';
+    b.style.cssText = 'position:fixed;top:16px;right:16px;z-index:60;width:40px;height:40px;border-radius:50%;'
+      + 'background:rgba(0,0,0,.35);color:#fff;display:flex;align-items:center;justify-content:center;'
+      + 'font-size:20px;cursor:pointer;user-select:none;';
+    b.onclick = openSheet;
+    document.body.appendChild(b);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addButton);
+  } else {
+    addButton();
+  }
+})();
+</script>
+</body>
+</html>
