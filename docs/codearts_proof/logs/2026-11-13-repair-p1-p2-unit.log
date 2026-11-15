@@ -1,0 +1,42 @@
+✔ P1-01 closing save during /auth/me keeps the user choice temporary (9.0329ms)
+✔ P1-02 initial preference restore loses to a later explicit close (4.8401ms)
+✔ P1-03 a late auth response for another account does not grant save (6.5619ms)
+✔ P1-04 a reply arriving after clear never re-enters the next temporary request (5.0139ms)
+✔ P1-05 a failed clear keeps the visible turns and context (4.0658ms)
+✔ P1-06 clear then immediate send is not blocked by the old pending request (3.4621ms)
+✔ P1-07 account switch clears A data and sends B as temporary (4.2304ms)
+✔ P1-08 an old saved reply cannot repopulate after account switch (4.2058ms)
+✔ P2-01 an old memory response cannot overwrite a successful clear (3.5131ms)
+✔ P2-02 closing the panel discards a pending memory response (3.1326ms)
+✔ B2 prepare responses cannot replace a newer draft (10.0643ms)
+✔ B3 cancel is terminal and cannot submit a confirmation (4.6768ms)
+✔ B1 confirmation timeout retries the same draft id and renders real data (5.6439ms)
+✔ B4 crisis care is rendered inside the open panel with tel links (4.185ms)
+✔ B3 error mapping separates cancellation, conflict, expiry and deleted diary (0.2813ms)
+✔ P2-03 a failed clear keeps the server summary and explains the failure (4.3213ms)
+✔ normal confirm still posts once and renders the real diary result (5.3503ms)
+✔ saved chat sends explicit remember:true with an empty client history (1.4195ms)
+✔ temporary reset clears the next request history without changing the request shape (0.2387ms)
+✔ invalidate makes an in-flight response stale without changing the protocol (0.1249ms)
+✔ save preference is scoped to the current uid and defaults to off (0.1737ms)
+✔ user id accepts both uid and id and never leaks other fields (0.0975ms)
+✔ draft material keeps the selected order and rejects empty or over-2000 content (0.1408ms)
+✔ draft text validation allows 5000 and rejects 5001 UTF-16 units (0.1874ms)
+✔ local date key uses calendar fields instead of UTC (7.6726ms)
+✔ older history pages are prepended and de-duplicated by id (0.2935ms)
+✔ draft error codes map to actionable states (0.3624ms)
+✔ only same-site diary write links are accepted (0.3268ms)
+✔ provider status never presents the local fallback as a real model (0.0769ms)
+✔ temporary chat sends explicit no-memory consent and retains only completed turns (2.0224ms)
+✔ a second submit cannot create another request while the first reply is pending (0.5984ms)
+✔ failed turns preserve care but are excluded from later model context (0.1831ms)
+✔ history stays within the backend limit and long input never leaves the client (0.2389ms)
+✔ long model replies remain fully visible without breaking subsequent history requests (0.2145ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 524.9357

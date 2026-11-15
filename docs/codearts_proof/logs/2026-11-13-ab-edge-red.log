@@ -1,0 +1,603 @@
+[红是预期] 本日志证明修复前缺陷存在，不代表通过。
+
+✔ P1-01 closing save during /auth/me keeps the user choice temporary (6.3945ms)
+✔ P1-02 initial preference restore loses to a later explicit close (3.0427ms)
+✔ P1-03 a late auth response for another account does not grant save (3.7528ms)
+✔ P1-04 a reply arriving after clear never re-enters the next temporary request (4.608ms)
+✔ P1-05 a failed clear keeps the visible turns and context (3.3376ms)
+✔ P1-06 clear then immediate send is not blocked by the old pending request (3.2781ms)
+✔ P1-07 account switch clears A data and sends B as temporary (3.5182ms)
+✔ P1-08 an old saved reply cannot repopulate after account switch (3.761ms)
+✔ P2-01 an old memory response cannot overwrite a successful clear (3.465ms)
+✔ P2-02 closing the panel discards a pending memory response (3.1141ms)
+✔ B2 prepare responses cannot replace a newer draft (8.3178ms)
+✔ B3 cancel is terminal and cannot submit a confirmation (3.5482ms)
+✔ B1 confirmation timeout retries the same draft id and renders real data (3.4883ms)
+✔ B4 crisis care is rendered inside the open panel with tel links (4.5859ms)
+✔ B3 error mapping separates cancellation, conflict, expiry and deleted diary (0.2318ms)
+✔ P2-03 a failed clear keeps the server summary and explains the failure (3.6852ms)
+✔ normal confirm still posts once and renders the real diary result (2.9667ms)
+✖ EDGE-R1-01 draft material is bound to the selecting account before prepare (3.4792ms)
+✔ EDGE-R1-02 same-account token refresh still prepares exactly once (2.8255ms)
+✖ EDGE-R1-03 confirm does not submit A draft after credentials switch to B without storage (2.8861ms)
+✖ EDGE-R1-04 a late prepare response cannot land after credentials switch to B (3.5491ms)
+✖ EDGE-R2-01 memory opened during pending clear cannot restore the cleared summary (3.6934ms)
+✖ EDGE-R2-02 a successful clear invalidates an already rendered old summary (3.5227ms)
+✔ EDGE-R2-03 a successful clear leaves an open draft editor untouched (3.5333ms)
+✖ EDGE-R3-01 a late clear success for A cannot wipe B page or announce B cleared (3.0062ms)
+✔ EDGE-R3-02 closing the clear panel still clears the same account context (2.6577ms)
+✔ EDGE-R3-03 a late clear failure for A cannot show on B page (2.6059ms)
+✖ EDGE-R4-01 an obsolete send cannot unlock a newer pending send (3.3127ms)
+✖ EDGE-R4-02 double click during identity verification sends only once (3.3928ms)
+✔ EDGE-R4-03 a late send failure for A cannot overwrite B input or notice (2.9047ms)
+✖ EDGE-R5-01 confirm success shows full care inside the open dialog (2.9934ms)
+✖ EDGE-R5-02 recovered confirm success also shows full care in the dialog (3.2605ms)
+✔ EDGE-R5-03 confirm success without care renders no care block or tel link (3.344ms)
+✖ EDGE-R6-01 crisis prepare stops generation with care and return entry (5.1126ms)
+✔ EDGE-R6-02 a failed prepare is retryable and is not a stopped terminal (4.142ms)
+✔ EDGE-R6-03 stopped care does not leak into the next account page (3.0263ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 25
+ℹ fail 11
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 354.2309
+
+✖ failing tests:
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:484:1
+✖ EDGE-R1-01 draft material is bound to the selecting account before prepare (3.4792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:500:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:529:1
+✖ EDGE-R1-03 confirm does not submit A draft after credentials switch to B without storage (2.8861ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:550:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:555:1
+✖ EDGE-R1-04 a late prepare response cannot land after credentials switch to B (3.5491ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   date: '2026-11-13',
+  +   id: 'late',
+  +   sources: [],
+  +   status: 'pending',
+  +   text: 'A late draft body'
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:573:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { id: 'late', date: '2026-11-13', text: 'A late draft body', status: 'pending', sources: [] },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:577:1
+✖ EDGE-R2-01 memory opened during pending clear cannot restore the cleared summary (3.6934ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   hasMemory: true,
+  +   pendingMessages: 0,
+  +   summary: 'old cleared summary',
+  +   totalMessages: 2
+  + }
+  - null
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:594:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { hasMemory: true, summary: 'old cleared summary', totalMessages: 2, pendingMessages: 0 },
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:599:1
+✖ EDGE-R2-02 a successful clear invalidates an already rendered old summary (3.5227ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /pre-clear summary/. Input:
+  
+  '小陪整理出的长期摘要：pre-clear summary共 2 条聊天记录；0 条尚未整理进摘要。最近聊天：暂无最近聊天'
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:618:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '小陪整理出的长期摘要：pre-clear summary共 2 条聊天记录；0 条尚未整理进摘要。最近聊天：暂无最近聊天',
+    expected: /pre-clear summary/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:654:1
+✖ EDGE-R3-01 a late clear success for A cannot wipe B page or announce B cleared (3.0062ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 2
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:678:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:734:1
+✖ EDGE-R4-01 an obsolete send cannot unlock a newer pending send (3.3127ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:763:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:778:1
+✖ EDGE-R4-02 double click during identity verification sends only once (3.3928ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:796:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:819:1
+✖ EDGE-R5-01 confirm success shows full care inside the open dialog (2.9934ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /synthetic crisis support/. Input:
+  
+  '已保存为私密日记。日记编号：10日期：2026-11-13可见性：私密打开这篇日记关闭再整理一段'
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:839:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '已保存为私密日记。日记编号：10日期：2026-11-13可见性：私密打开这篇日记关闭再整理一段',
+    expected: /synthetic crisis support/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:848:1
+✖ EDGE-R5-02 recovered confirm success also shows full care in the dialog (3.2605ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /recovered support/. Input:
+  
+  '已保存为私密日记。日记编号：42日期：2026-11-13可见性：私密打开这篇日记关闭再整理一段'
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:872:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '已保存为私密日记。日记编号：42日期：2026-11-13可见性：私密打开这篇日记关闭再整理一段',
+    expected: /recovered support/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at 后端源码\scripts\test-chat-companion-repair.test.js:901:1
+✖ EDGE-R6-01 crisis prepare stops generation with care and return entry (5.1126ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + <ref *1> El {
+  +   attrs: {},
+  +   checked: false,
+  +   children: [],
+  +   className: 'cc-primary',
+  +   disabled: false,
+  +   events: {},
+  +   hidden: false,
+  +   href: '',
+  +   onclick: [Function (anonymous)],
+  +   parent: <ref *7> El {
+  +     attrs: {},
+  +     checked: false,
+  +     children: [
+  +       [Circular *1]
+  +     ],
+  +     className: 'cc-actions',
+  +     disabled: false,
+  +     events: {},
+  +     hidden: false,
+  +     href: '',
+  +     onclick: null,
+  +     parent: <ref *2> El {
+  +       attrs: {},
+  +       checked: false,
+  +       children: [
+  +         El {
+  +           attrs: {},
+  +           checked: false,
+  +           children: [],
+  +           disabled: false,
+  +           events: {},
+  +           hidden: false,
+  +           href: '',
+  +           onclick: null,
+  +           parent: [Circular *2],
+  +           scrollHeight: 0,
+  +           scrollTop: 0,
+  +           tag: 'p',
+  +           text: '选择想整理成私密日记的内容。默认只整理你勾选的内容，不会读取其他日记。',
+  +           type: '',
+  +           value: ''
+  +         },
+  +         <ref *4> El {
+  +           attrs: {},
+  +           checked: false,
+  +           children: [
+  +             <ref *3> El {
+  +               attrs: {},
+  +               checked: false,
+  +               children: [
+  +                 El {
+  +                   attrs: {},
+  +                   checked: false,
+  +                   children: [],
+  +                   disabled: false,
+  +                   events: {
+  +                     change: [
+  +                       [Function: updateDraftCounter]
+  +                     ]
+  +                   },
+  +                   hidden: false,
+  +                   href: '',
+  +                   name: 'cc-turn',
+  +                   onclick: null,
+  +                   parent: [Circular *3],
+  +                   scrollHeight: 0,
+  +                   scrollTop: 0,
+  +                   tag: 'input',
+  +                   text: '',
+  +                   type: 'checkbox',
+  +                   value: '0'
+  +                 },
+  +                 El {
+  +                   attrs: {},
+  +                   checked: false,
+  +                   children: [],
+  +                   disabled: false,
+  +                   events: {},
+  +                   hidden: false,
+  +                   href: '',
+  +                   onclick: null,
+  +                   parent: [Circular *3],
+  +                   scrollHeight: 0,
+  +                   scrollTop: 0,
+  +                   tag: 'span',
+  +                   text: '我说：synthetic crisis',
+  +                   type: '',
+  +                   value: ''
+  +                 }
+  +               ],
+  +               className: 'cc-check',
+  +               disabled: false,
+  +               events: {},
+  +               hidden: false,
+  +               href: '',
+  +               onclick: null,
+  +               parent: [Circular *4],
+  +               scrollHeight: 0,
+  +               scrollTop: 0,
+  +               tag: 'label',
+  +               text: '',
+  +               type: '',
+  +               value: ''
+  +             }
+  +           ],
+  +           className: 'cc-check-list',
+  +           disabled: false,
+  +           events: {},
+  +           hidden: false,
+  +           href: '',
+  +           onclick: null,
+  +           parent: [Circular *2],
+  +           scrollHeight: 0,
+  +           scrollTop: 0,
+  +           tag: 'div',
+  +           text: '',
+  +           type: '',
+  +           value: ''
+  +         },
+  +         El {
+  +           attrs: {},
+  +           checked: false,
+  +           children: [],
+  +           className: 'cc-muted',
+  +           disabled: false,
+  +           events: {},
+  +           hidden: false,
+  +           href: '',
+  +           onclick: null,
+  +           parent: [Circular *2],
+  +           scrollHeight: 0,
+  +           scrollTop: 0,
+  +           tag: 'p',
+  +           text: '已选 0 字 / 最多 2000 字',
+  +           type: '',
+  +           value: ''
+  +         },
+  +         <ref *5> El {
+  +           attrs: {},
+  +           checked: false,
+  +           children: [
+  +             El {
+  +               attrs: {},
+  +               checked: false,
+  +               children: [],
+  +               disabled: false,
+  +               events: {},
+  +               hidden: false,
+  +               href: '',
+  +               onclick: null,
+  +               parent: [Circular *5],
+  +               scrollHeight: 0,
+  +               scrollTop: 0,
+  +               tag: 'span',
+  +               text: '日记日期',
+  +               type: '',
+  +               value: ''
+  +             },
+  +             El {
+  +               attrs: {
+  +                 'aria-label': '日记日期'
+  +               },
+  +               checked: false,
+  +               children: [],
+  +               disabled: false,
+  +               events: {},
+  +               hidden: false,
+  +               href: '',
+  +               onclick: null,
+  +               parent: [Circular *5],
+  +               scrollHeight: 0,
+  +               scrollTop: 0,
+  +               tag: 'input',
+  +               text: '',
+  +               type: 'date',
+  +               value: '2026-11-13'
+  +             }
+  +           ],
+  +           className: 'cc-field',
+  +           disabled: false,
+  +           events: {},
+  +           hidden: false,
+  +           href: '',
+  +           onclick: null,
+  +           parent: [Circular *2],
+  +           scrollHeight: 0,
+  +           scrollTop: 0,
+  +           tag: 'div',
+  +           text: '',
+  +           type: '',
+  +           value: ''
+  +         },
+  +         <ref *6> El {
+  +           attrs: {},
+  +           checked: false,
+  +           children: [
+  +             El {
+  +               attrs: {},
+  +               checked: false,
+  +               children: [],
+  +               disabled: false,
+  +               events: {
+  +                 change: [
+  +                   [Function (anonymous)]
+  +                 ]
+  +               },
+  +               hidden: false,
+  +               href: '',
+  +               onclick: null,
+  +               parent: [Circular *6],
+  +               scrollHeight: 0,
+  +               scrollTop: 0,
+  +               tag: 'input',
+  +               text: '',
+  +               type: 'checkbox',
+  +               value: ''
+  +             },
+  +             El {
+  +               attrs: {},
+  +               checked: false,
+  +               children: [],
+  +               disabled: false,
+  +               events: {},
+  +               hidden: false,
+  +               href: '',
+  +               onclick: null,
+  +               parent: [Circular *6],
+  +               scrollHeight: 0,
+  +               scrollTop: 0,
+  +               tag: 'span',
+  +               text: '参考我最近的日记（主动授权后才读取）',
+  +               type: '',
+  +               value: ''
+  +             }
+  +           ],
+  +           className: 'cc-check',
+  +           disabled: false,
+  +           events: {},
+  +           hidden: false,
+  +           href: '',
+  +           onclick: null,
+  +           parent: [Circular *2],
+  +           scrollHeight: 0,
+  +           scrollTop: 0,
+  +           tag: 'label',
+  +           text: '',
+  +           type: '',
+  +           value: ''
+  +         },
+  +         El {
+  +           attrs: {},
+  +           checked: false,
+  +           children: [],
+  +           className: 'cc-note',
+  +           disabled: false,
+  +           events: {},
+  +           hidden: false,
+  +           href: '',
+  +           onclick: null,
+  +           parent: [Circular *2],
+  +           scrollHeight: 0,
+  +           scrollTop: 0,
+  +           tag: 'p',
+  +           text: '已停止生成。先照顾好自己，这里暂不保存日记。',
+  +           type: '',
+  +           value: ''
+  +         },
+  +         [Circular *7],
+  +         <ref *8> El {
+  +           attrs: {},
+  +           checked: false,
+  +           children: [
+  +             El {
+  +               attrs: {},
+  +               checked: false,
+  +               children: [],
+  +               disabled: false,
+  +               events: {},
+  +               hidden: false,
+  +               href: '',
+  +               onclick: null,
+  +               parent: [Circular *8],
+  +               scrollHeight: 0,
+  +               scrollTop: 0,
+  +               tag: 'p',
+  +               text: 'stopped support',
+  +               type: '',
+  +               value: ''
+  +             },
+  +             El {
+  +               attrs: {},
+  +               checked: false,
+  +               children: [],
+  +               disabled: false,
+  +               events: {},
+  +               hidden: false,
+  +               href: 'tel:12356',
+  +               onclick: null,
+  +               parent: [Circular *8],
+  +               scrollHeight: 0,
+  +               scrollTop: 0,
+  +               tag: 'a',
+  +               text: 'help：12356',
+  +               type: '',
+  +               value: ''
+  +             }
+  +           ],
+  +           className: 'cc-note cc-care',
+  +           disabled: false,
+  +           events: {},
+  +           hidden: false,
+  +           href: '',
+  +           onclick: null,
+  +           parent: [Circular *2],
+  +           scrollHeight: 0,
+  +           scrollTop: 0,
+  +           tag: 'div',
+  +           text: '',
+  +           type: '',
+  +           value: ''
+  +         }
+  +       ],
+  +       disabled: false,
+  +       events: {},
+  +       hidden: false,
+  +       href: '',
+  +       onclick: null,
+  +       querySelectorAll: [Function (anonymous)],
+  +       scrollHeight: 0,
+  +       scrollTop: 0,
+  +       tag: 'div',
+  +       text: '',
+  +       type: '',
+  +       value: ''
+  +     },
+  +     scrollHeight: 0,
+  +     scrollTop: 0,
+  +     tag: 'div',
+  +     text: '',
+  +     type: '',
+  +     value: ''
+  +   },
+  +   scrollHeight: 0,
+  +   scrollTop: 0,
+  +   tag: 'button',
+  +   text: '生成草稿',
+  +   type: 'button',
+  +   value: ''
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-chat-companion-repair.test.js:919:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [El],
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+EXIT_CODE=1

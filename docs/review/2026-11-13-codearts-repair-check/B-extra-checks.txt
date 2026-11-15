@@ -1,0 +1,12 @@
+✔ B2 close/reopen discards pending confirm and prepare responses (4.705ms)
+✔ B3 confirm busy disables cancel/back/edit and prevents cancel API (2.7147ms)
+✔ B1 two missing confirm responses can recover later using same id (1.4854ms)
+✔ B4 REMAINING: crisis result leaves enabled generation button and repeats prepare (1.4285ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91.3509

@@ -1,0 +1,51 @@
+# 2026-11-15 游客上下文归属修复 · 修改面与只读文件核对（T17–T18）
+
+> 执行目录：`D:\微光同行\Glimmer`
+
+## 业务文件改动范围
+
+```text
+chat-companion.js 修复前行数：1744
+chat-companion.js 修复后行数：1743
+修复前 SHA-256：854eeb95cb6a9a4070f0c39c2f7705e3c01cfa0df69c582e43c688fd839224b6
+修复后 SHA-256：31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270
+删除行数（按行内容差集）：2
+- state.turns.length || state.draft || state.memorySnapshot ||
+- state.historyItems.length || state.panelKind
+新增行数（按行内容差集）：1
++ state.draft || state.memorySnapshot || state.historyItems.length
+```
+
+## 测试文件纯追加核对
+
+```text
+追加前行数：1383
+当前行数：1587
+前 1383 行逐行一致：是
+当前 ^test( 用例数：68
+追加前 SHA-256：f3574ff05c56b7ee0d0704e3fe2d4b2c189e47ad84e7b6dd1419ccd0d6f02559
+当前 SHA-256：b08a6cfa336e021369f28b000a2e5ce288d3a45e2d14fe7f2ab3edb41ee371b7
+```
+
+## 只读文件哈希比对
+
+| 文件 | 当前 SHA-256 | 结论 |
+|---|---|---|
+| `前端参考/api.js` | 956755ab29f9cad4a2a31b059c202ccf2e049b34823902346c57f4e84341a626 | 未变 |
+| `前端参考/chat-session.js` | bd5710b43ad63984e16485b813514f2572a40ce90a0803a68dc77b3cf6b1af7c | 未变 |
+| `后端源码/package.json` | 7e0e9eb1450ee71d00fddf8c6d3b3dd0a2573e07e66111eeb87f58bcec2cea04 | 未变 |
+| `前端参考/chat-companion.css` | bff4294096e6df0b3527f566c7c64b298d4541c0c24eb6a6ac81329884cb2e58 | 未变 |
+| `docs/review/2026-11-15-identity-guest/acceptance-boundaries.test.cjs` | 785bfb7aeec0893f389652ef1f0beb991dd570a4b4095a49d3fd3ca876e1098a | 未变 |
+
+## 脱敏检索（本轮新增日志）
+
+```text
+命中数：0
+```
+
+## 结论
+
+1. 业务文件仅收窄 `hasLegacyContext()`：移除 `state.turns.length` 与 `state.panelKind`，保留身份痕迹与账号专属内容共 6 项。
+2. 测试文件为纯追加：前 1383 行未改动，13 条 `EDGE-R9-*` 从第 1384 行后开始，总数 68 条。
+3. `chat-session.js`、`api.js`、`package.json`、CSS 与独立脚本哈希未变。
+4. 本轮日志未出现真实凭证明文、JWT 或 11 位手机号。

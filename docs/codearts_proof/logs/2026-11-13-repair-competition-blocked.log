@@ -1,0 +1,306 @@
+
+> peizhe-server@0.1.0 test:competition
+> node --test scripts/test-ai-session.test.js scripts/test-chat-session.test.js scripts/test-chat-companion.test.js scripts/test-chat-companion-repair.test.js scripts/test-crisis-policy.test.js && node scripts/test-companion.test.js && node scripts/test-moderation.js && node scripts/test-chatbot.js
+
+Sandbox Network Error: hit restricted [127.0.0.1:3307]
+✖ remember:false isolates stored memory and history and never changes persisted rows (46.1197ms)
+✖ explicit remember:true requires login; omitted remember keeps anonymous and logged-in compatibility (0.0548ms)
+✖ rejects invalid history, roles, lengths, remember types and nonstring messages (0.0364ms)
+✖ clear waits for an in-flight persistent chat and removes all resulting messages (0.0351ms)
+✖ message pair and profile statistics roll back together on assistant write failure (0.045ms)
+✖ model outage returns explicit fallback and deterministic crisis care (0.0316ms)
+✖ background summary does not delay chat or clear and cannot restore cleared memory (0.0523ms)
+✖ queued persistent chats see the preceding committed reply and ignore client-supplied history (0.0401ms)
+✖ background summary advances the message id cursor and preserves the recent tail (0.1296ms)
+✖ missing API key uses explicit local mode without loopback or external model traffic (0.0838ms)
+✖ old summary cannot replace memory after clearing and beginning a new persistent conversation (0.0465ms)
+✔ P1-01 closing save during /auth/me keeps the user choice temporary (10.4752ms)
+✔ P1-02 initial preference restore loses to a later explicit close (6.5293ms)
+✔ P1-03 a late auth response for another account does not grant save (8.4723ms)
+✔ P1-04 a reply arriving after clear never re-enters the next temporary request (11.8811ms)
+✔ P1-05 a failed clear keeps the visible turns and context (9.0739ms)
+✔ P1-06 clear then immediate send is not blocked by the old pending request (8.9366ms)
+✔ P1-07 account switch clears A data and sends B as temporary (8.2899ms)
+✔ P1-08 an old saved reply cannot repopulate after account switch (8.9993ms)
+✔ P2-01 an old memory response cannot overwrite a successful clear (6.0821ms)
+✔ P2-02 closing the panel discards a pending memory response (7.0131ms)
+✔ B2 prepare responses cannot replace a newer draft (18.3496ms)
+✔ B3 cancel is terminal and cannot submit a confirmation (10.2071ms)
+✔ B1 confirmation timeout retries the same draft id and renders real data (10.3787ms)
+✔ B4 crisis care is rendered inside the open panel with tel links (10.8463ms)
+✔ B3 error mapping separates cancellation, conflict, expiry and deleted diary (0.2416ms)
+✔ P2-03 a failed clear keeps the server summary and explains the failure (8.2771ms)
+✔ normal confirm still posts once and renders the real diary result (8.3174ms)
+✔ saved chat sends explicit remember:true with an empty client history (1.7657ms)
+✔ temporary reset clears the next request history without changing the request shape (0.2487ms)
+✔ invalidate makes an in-flight response stale without changing the protocol (0.3076ms)
+✔ save preference is scoped to the current uid and defaults to off (0.1858ms)
+✔ user id accepts both uid and id and never leaks other fields (0.1251ms)
+✔ draft material keeps the selected order and rejects empty or over-2000 content (0.3979ms)
+✔ draft text validation allows 5000 and rejects 5001 UTF-16 units (0.2995ms)
+✔ local date key uses calendar fields instead of UTC (16.671ms)
+✔ older history pages are prepended and de-duplicated by id (0.425ms)
+✔ draft error codes map to actionable states (1.2787ms)
+✔ only same-site diary write links are accepted (0.5691ms)
+✔ provider status never presents the local fallback as a real model (0.2361ms)
+✔ temporary chat sends explicit no-memory consent and retains only completed turns (2.1171ms)
+✔ a second submit cannot create another request while the first reply is pending (0.7183ms)
+✔ failed turns preserve care but are excluded from later model context (0.2333ms)
+✔ history stays within the backend limit and long input never leaves the client (0.2708ms)
+✔ long model replies remain fully visible without breaking subsequent history requests (0.2761ms)
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截公开日记 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截公开日记 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截公开日记 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截评论 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截评论 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截评论 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [刷屏] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  💚 群 interest 检测到危机信号，机器人已发关怀提示
+  🤖 群 interest 拦截消息 [人身攻击] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 群 interest 拦截消息 [刷屏] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  ✿ synthetic → synthetic target：我不想活了
+  🤖 拦截祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  ✿ synthetic → synthetic target：今天很难过，想找个人聊聊
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🍾 synthetic 扔了一个瓶子：我不想活了
+  🤖 拦截漂流瓶 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截漂流瓶 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🍾 synthetic 扔了一个瓶子：今天很难过，想找个人聊聊
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截瓶子祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+✔ crisis remains visible when advertising matches first (1.1206ms)
+✔ mixed crisis never hides another moderation category (0.8715ms)
+✔ group bot preserves both flags and the existing penalty tiers (0.3379ms)
+✔ public diary blocks mixed advertising while returning care (12.4037ms)
+✔ public diary allows pure crisis with care (1.0332ms)
+✔ public diary does not let crisis cancel attacks or spam (0.4134ms)
+✔ public diary keeps ordinary sadness and advertising separate (0.5285ms)
+✔ new comment blocks mixed advertising while returning care (0.6053ms)
+✔ new comment allows pure crisis with care (0.6102ms)
+✔ new comment does not let crisis cancel attacks or spam (0.3952ms)
+✔ new comment keeps ordinary sadness and advertising separate (0.3064ms)
+✔ edited comment blocks mixed advertising while returning care (0.1856ms)
+✔ edited comment allows pure crisis with care (0.1016ms)
+✔ edited comment does not let crisis cancel attacks or spam (0.118ms)
+✔ edited comment keeps ordinary sadness and advertising separate (0.1215ms)
+✔ private message blocks mixed advertising while returning care (0.4516ms)
+✔ private message allows pure crisis with care (0.2908ms)
+✔ private message does not let crisis cancel attacks or spam (0.3431ms)
+✔ private message keeps ordinary sadness and advertising separate (0.2107ms)
+✔ group message blocks mixed advertising while returning care (0.5577ms)
+✔ group message allows pure crisis with care (0.3634ms)
+✔ group message does not let crisis cancel attacks or spam (0.2865ms)
+✔ group message keeps ordinary sadness and advertising separate (0.3109ms)
+✔ blessing blocks mixed advertising while returning care (0.3735ms)
+✔ blessing allows pure crisis with care (0.4642ms)
+✔ blessing does not let crisis cancel attacks or spam (0.2458ms)
+✔ blessing keeps ordinary sadness and advertising separate (0.6692ms)
+✔ bottle toss blocks mixed advertising while returning care (0.4252ms)
+✔ bottle toss allows pure crisis with care (0.3065ms)
+✔ bottle toss does not let crisis cancel attacks or spam (0.2189ms)
+✔ bottle toss keeps ordinary sadness and advertising separate (0.2667ms)
+✔ bottle blessing blocks mixed advertising while returning care (0.2421ms)
+✔ bottle blessing allows pure crisis with care (0.0961ms)
+✔ bottle blessing does not let crisis cancel attacks or spam (0.1537ms)
+✔ bottle blessing keeps ordinary sadness and advertising separate (0.0904ms)
+✔ publicizing a private mixed diary cannot bypass moderation (0.1935ms)
+✔ private diary retains mixed content with care (0.1462ms)
+✔ visibility permits a pure crisis and still permits making mixed content private (0.1031ms)
+✔ visibility cannot publish mixed content saved after its moderation snapshot (0.4719ms)
+✔ visibility detects concurrent visibility changes even when text is unchanged (0.183ms)
+✔ ordinary sadness and advertising alone do not trigger crisis care (0.1338ms)
+ℹ tests 86
+ℹ suites 0
+ℹ pass 75
+ℹ fail 11
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2657.7471
+
+✖ failing tests:
+
+test at scripts\test-ai-session.test.js:97:1
+✖ remember:false isolates stored memory and history and never changes persisted rows (46.1197ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:108:1
+✖ explicit remember:true requires login; omitted remember keeps anonymous and logged-in compatibility (0.0548ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:115:1
+✖ rejects invalid history, roles, lengths, remember types and nonstring messages (0.0364ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:126:1
+✖ clear waits for an in-flight persistent chat and removes all resulting messages (0.0351ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:140:1
+✖ message pair and profile statistics roll back together on assistant write failure (0.045ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:148:1
+✖ model outage returns explicit fallback and deterministic crisis care (0.0316ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:157:1
+✖ background summary does not delay chat or clear and cannot restore cleared memory (0.0523ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:170:1
+✖ queued persistent chats see the preceding committed reply and ignore client-supplied history (0.0401ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:183:1
+✖ background summary advances the message id cursor and preserves the recent tail (0.1296ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:197:1
+✖ missing API key uses explicit local mode without loopback or external model traffic (0.0838ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:208:1
+✖ old summary cannot replace memory after clearing and beginning a new persistent conversation (0.0465ms)
+  Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:51605)
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4062,
+    code: 'ENETUNREACH',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }

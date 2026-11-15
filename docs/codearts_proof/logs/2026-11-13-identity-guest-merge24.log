@@ -1,0 +1,54 @@
+COMMAND=npm run test:merge24
+CWD=后端源码
+STARTED_AT=2026-11-13T13:54:00.665Z
+
+
+> peizhe-server@0.1.0 test:merge24
+> node --test scripts/test-merge24-moderation.test.js scripts/test-message-links.test.js scripts/test-merge24-frontend.test.js && node scripts/test-merge24-social.test.js && node scripts/test-merge24-mute.test.js
+
+✔ private chat shows sender care before returning on code 0 (1.1066ms)
+✔ group chat shows sender care before returning on code 0 (0.6065ms)
+✔ private chat shows sender care before returning on code 403 (0.5112ms)
+✔ group chat shows sender care before returning on code 403 (0.9735ms)
+✔ unfollowed message senders remain reachable and untrusted names stay text (1.281ms)
+✔ conversation API failure produces visible error instead of an empty result (0.5837ms)
+✔ blocked shared-diary messages cannot regain a navigation card through the wrapper (0.5618ms)
+  💚 群 interest 检测到危机信号，机器人已发关怀提示
+  🤖 群 interest 拦截消息 [诈骗] user=71 第1次
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+✔ expanded abusive language detects spacing and zero-width obfuscation (1.5339ms)
+✔ normal health, debt and security discussions are not punished (0.5754ms)
+✔ explicit recruitment and credential solicitation remain blocked (0.1435ms)
+✔ new crisis phrases including split characters are independently detected (0.1375ms)
+✔ privacy number mask covers every occurrence and emoji uses codepoints (0.4192ms)
+✔ muted ordinary group messages remain rejected (0.6237ms)
+✔ muted pure crisis reaches group support (14.5484ms)
+✔ muted mixed crisis returns care without broadcasting prohibited text (0.3691ms)
+✔ DM frequency still rejects ordinary bursts (0.4014ms)
+✔ DM pure crisis bypasses frequency but receives private care (0.387ms)
+✔ DM mixed crisis bypasses frequency only for feedback, never delivery (0.3271ms)
+✔ private bot escalation never claims mute or hypothetical future sanctions (1.3376ms)
+✔ normal DM relies on conversation unread without duplicate notification writes (0.254ms)
+✔ blocked private text is absent from runtime logs (0.1927ms)
+✔ only the two supported local notification destinations become links (1.0018ms)
+✔ untrusted navigation remains plain text (0.1541ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1150.7698
+Sandbox Network Error: hit restricted [127.0.0.1:3307]
+Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:56097)
+    at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+    at file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-merge24-social.test.js:23:22
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+EXIT_CODE=1

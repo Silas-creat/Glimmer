@@ -1,0 +1,69 @@
+COMMAND=node --test --test-timeout=5000 --test-reporter=spec scripts/test-chat-companion-repair.test.js
+CWD=后端源码
+STARTED_AT=2026-11-15T11:32:13.190Z
+
+✔ P1-01 closing save during /auth/me keeps the user choice temporary (4.12ms)
+✔ P1-02 initial preference restore loses to a later explicit close (1.5801ms)
+✔ P1-03 a late auth response for another account does not grant save (1.3441ms)
+✔ P1-04 a reply arriving after clear never re-enters the next temporary request (1.7964ms)
+✔ P1-05 a failed clear keeps the visible turns and context (1.3388ms)
+✔ P1-06 clear then immediate send is not blocked by the old pending request (1.207ms)
+✔ P1-07 account switch clears A data and sends B as temporary (1.5086ms)
+✔ P1-08 an old saved reply cannot repopulate after account switch (1.4459ms)
+✔ P2-01 an old memory response cannot overwrite a successful clear (1.5883ms)
+✔ P2-02 closing the panel discards a pending memory response (1.5949ms)
+✔ B2 prepare responses cannot replace a newer draft (2.4863ms)
+✔ B3 cancel is terminal and cannot submit a confirmation (1.4257ms)
+✔ B1 confirmation timeout retries the same draft id and renders real data (2.5342ms)
+✔ B4 crisis care is rendered inside the open panel with tel links (1.2571ms)
+✔ B3 error mapping separates cancellation, conflict, expiry and deleted diary (0.1699ms)
+✔ P2-03 a failed clear keeps the server summary and explains the failure (1.0156ms)
+✔ normal confirm still posts once and renders the real diary result (1.2287ms)
+✔ EDGE-R1-01 draft material is bound to the selecting account before prepare (1.1696ms)
+✔ EDGE-R1-02 same-account token refresh still prepares exactly once (1.2477ms)
+✔ EDGE-R1-03 confirm does not submit A draft after credentials switch to B without storage (1.4944ms)
+✔ EDGE-R1-04 a late prepare response cannot land after credentials switch to B (1.4128ms)
+✔ EDGE-R2-01 memory opened during pending clear cannot restore the cleared summary (1.0447ms)
+✔ EDGE-R2-02 a successful clear invalidates an already rendered old summary (1.1005ms)
+✔ EDGE-R2-03 a successful clear leaves an open draft editor untouched (2.0871ms)
+✔ EDGE-R3-01 a late clear success for A cannot wipe B page or announce B cleared (1.1396ms)
+✔ EDGE-R3-02 closing the clear panel still clears the same account context (1.0883ms)
+✔ EDGE-R3-03 a late clear failure for A cannot show on B page (1.0855ms)
+✔ EDGE-R4-01 an obsolete send cannot unlock a newer pending send (1.1361ms)
+✔ EDGE-R4-02 double click during identity verification sends only once (0.9679ms)
+✔ EDGE-R4-03 a late send failure for A cannot overwrite B input or notice (0.9524ms)
+✔ EDGE-R5-01 confirm success shows full care inside the open dialog (1.1091ms)
+✔ EDGE-R5-02 recovered confirm success also shows full care in the dialog (1.123ms)
+✔ EDGE-R5-03 confirm success without care renders no care block or tel link (1.3526ms)
+✔ EDGE-R6-01 crisis prepare stops generation with care and return entry (1.4076ms)
+✔ EDGE-R6-02 a failed prepare is retryable and is not a stopped terminal (1.5147ms)
+✔ EDGE-R6-03 stopped care does not leak into the next account page (1.1342ms)
+✔ EDGE-R7-01 a late auth response after storage-switch cannot submit A draft material (1.2103ms)
+✔ EDGE-R7-02 a pending verification cannot prepare after the panel is closed (1.1598ms)
+✔ EDGE-R7-03 a valid same-account token refresh prepares exactly once (1.0245ms)
+✔ EDGE-R7-04 a late auth response cannot confirm A draft on B credentials (1.107ms)
+✔ EDGE-R7-05 a late auth response cannot cancel A draft on B credentials (1.1531ms)
+✔ EDGE-R7-06 a late auth response cannot send A text on B credentials (0.9769ms)
+✔ EDGE-R7-07 a late restore verification cannot write A history into B page (0.9889ms)
+✔ EDGE-R7-08 a verification that outlives a second token refresh cannot prepare (1.0755ms)
+✔ EDGE-R7-09 a late prepare response cannot land after the panel is closed (1.0473ms)
+✔ EDGE-R8-01 a guest can send a temporary unsaved chat without verification (1.8071ms)
+✔ EDGE-R8-02 a guest refresh clears anonymous turns and can send again (1.9206ms)
+✔ EDGE-R8-03 a guest cannot enable saved mode (0.862ms)
+✔ EDGE-R8-04 a guest history memory draft entry asks for login without data (1.0852ms)
+✔ EDGE-R8-05 token removal isolates A context before a guest send (1.0533ms)
+✔ EDGE-R8-06 logout clears draft and memory then allows guest send (2.6053ms)
+✔ EDGE-R8-07 an old signed-in reply cannot land after logout (1.0974ms)
+✔ EDGE-R8-08 guest-to-login does not reuse anonymous content or enable saving (0.9833ms)
+✔ EDGE-R8-09 a guest double click sends only one request (0.9656ms)
+✔ EDGE-R8-10 a failed guest send keeps the text and writes no history (0.9653ms)
+ℹ tests 55
+ℹ suites 0
+ℹ pass 55
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 161.0908
+
+EXIT_CODE=0

@@ -1,0 +1,17 @@
+COMMAND=node docs/review/2026-11-13-codearts-repair-check/A-remaining-repro.cjs
+SEMANTICS=退出 0 表示缺陷存在；退出非 0 表示原断言未被满足（修复后缺陷不再复现）。本日志只作边界变化证据，不作通过依据。
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+2 !== 0
+
+    at D:\微光同行\Glimmer\docs\review\2026-11-13-codearts-repair-check\A-remaining-repro.cjs:29:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 2,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+EXIT_CODE=1

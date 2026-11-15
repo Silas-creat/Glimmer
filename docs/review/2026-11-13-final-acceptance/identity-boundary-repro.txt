@@ -1,0 +1,2 @@
+REPRO: delayed identity verification for A submits A material with current B credentials after storage reset.
+REPRO: anonymous temporary chat is blocked before /ai/chat although it previously allowed temporary messages.

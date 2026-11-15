@@ -1,0 +1,189 @@
+# 2026-11-13 A/B 边界收尾 · 前置基线日志（T01–T05）
+
+> 本文件为实施前冻结基线，只记录命令、哈希、行数与保护清单，不包含 token、密码或真实个人信息。
+> 执行目录：`D:\微光同行\Glimmer`
+
+## T01 关键文件 SHA-256 与备份
+
+### 原始文件（实施前）
+
+命令原文：
+
+```bash
+sha256sum "前端参考/chat-companion.js" "前端参考/chat-companion.css" "后端源码/scripts/test-chat-companion-repair.test.js" "前端参考/api.js" "前端参考/chat-session.js" "后端源码/package.json"
+```
+
+结果：
+
+```text
+d919b8385e8e13a36b2f0cca85cce2597595cbd71c76de6dd10a7bad7e726993  前端参考/chat-companion.js
+bff4294096e6df0b3527f566c7c64b298d4541c0c24eb6a6ac81329884cb2e58  前端参考/chat-companion.css
+b5c84a35d922342451ca7f4dc1c9edc9f74f12824fc1d5e1d6d0a4a926950e93  后端源码/scripts/test-chat-companion-repair.test.js
+956755ab29f9cad4a2a31b059c202ccf2e049b34823902346c57f4e84341a626  前端参考/api.js
+bd5710b43ad63984e16485b813514f2572a40ce90a0803a68dc77b3cf6b1af7c  前端参考/chat-session.js
+7e0e9eb1450ee71d00fddf8c6d3b3dd0a2573e07e66111eeb87f58bcec2cea04  后端源码/package.json
+```
+
+行数（`wc -l` 实测）：
+
+```text
+1193  前端参考/chat-companion.js
+ 259  前端参考/chat-companion.css
+ 482  后端源码/scripts/test-chat-companion-repair.test.js
+```
+
+> 说明：读文件工具显示 1194/260/483 行，是按“末行 + 结尾换行”计数的口径；`wc -l` 实测为 1193/259/482。本文件以实测值为准。
+
+### 备份（修复前副本）
+
+命令原文（Node 复制，规避 Windows 中文路径下 `cp` 挂起）：
+
+```bash
+node -e 'const fs=require("fs");const pairs=[["前端参考/chat-companion.js","docs/codearts_proof/backup/2026-11-13/chat-companion.js.pre-fix"],["前端参考/chat-companion.css","docs/codearts_proof/backup/2026-11-13/chat-companion.css.pre-fix"],["后端源码/scripts/test-chat-companion-repair.test.js","docs/codearts_proof/backup/2026-11-13/test-chat-companion-repair.test.js.pre-fix"]];for(const [a,b] of pairs){fs.copyFileSync(a,b);console.log("copied",b,fs.statSync(b).size)}'
+```
+
+输出：
+
+```text
+copied docs/codearts_proof/backup/2026-11-13/chat-companion.js.pre-fix 47881
+copied docs/codearts_proof/backup/2026-11-13/chat-companion.css.pre-fix 5384
+copied docs/codearts_proof/backup/2026-11-13/test-chat-companion-repair.test.js.pre-fix 20830
+```
+
+备份哈希校验（与原始文件逐一相等）：
+
+```text
+d919b8385e8e13a36b2f0cca85cce2597595cbd71c76de6dd10a7bad7e726993  backup/2026-11-13/chat-companion.js.pre-fix
+bff4294096e6df0b3527f566c7c64b298d4541c0c24eb6a6ac81329884cb2e58  backup/2026-11-13/chat-companion.css.pre-fix
+b5c84a35d922342451ca7f4dc1c9edc9f74f12824fc1d5e1d6d0a4a926950e93  backup/2026-11-13/test-chat-companion-repair.test.js.pre-fix
+```
+
+结论：3 份备份与原始文件哈希一致，可用于回滚。
+
+## T02 受保护文件清单（实施后须重算比对）
+
+规则：哈希不变 = 未被覆盖；本轮只新增文件，不改名、不重写。
+
+```text
+b53cae49ba89805093415f6566cec891a595813082c1dca611851bdf8ccf672c  docs/交接说明.md
+355c1f2f3461b27d25f9e4b58188ff9b92021e0f2ed2b2df69bc4b3d0603e525  docs/README.md
+d6e2287f49b94a5418372ba43f5c70e5c6529a68dd451c75eb1a7870c16375e9  docs/给CodeArts的返修收尾指令.md
+f4119bc13a2aa36ff9e38ecd4a13e19930f8165a23c503fb895c357267010b64  docs/CodeArts返修复验与下一步.md
+b98376523fee65ca8326c6720130d110265dffcb1df6dbabd1679e3f348bd63d  docs/codearts_proof/2026-11-13-任务A-记忆界面.md
+41c9ce59a4b455581d5cbb3fc2b93bd241c1eec64ad5af63385cd1a9938247e4  docs/codearts_proof/2026-11-13-任务AB返修.md
+2c333b332c6efdbd4a35e37e01a4e104e03d834fcd00d8cbd79a22abd65baa87  docs/codearts_proof/2026-11-13-任务B-草稿确认.md
+12aa3c77dcba4d4bb501de475106b1c204227184cdde6064c42af54a1aac409d  docs/codearts_proof/2026-11-13-首页AI入口.md
+f2f51b9af4ccf96fec2758cfe1697453388f76b0a9cbbe544bc1041576a99445  docs/codearts_proof/logs/2026-11-13-repair-competition-blocked.log
+cc6e41c4a7faa5d3d777ea91710b6dcdbfe39fd622d20d2c69c0d2bda4265698  docs/codearts_proof/logs/2026-11-13-repair-p1-p2-unit.log
+7f1201a101f17e00a9eba6b5ca7e1a503bd513e5c5c650fa272336833ab1409a  docs/review/.../A-remaining-repro.cjs
+6fcdecffa8d46fbe27655cec726869c51df1c1435cf24a75022c124a7e4cb8da  docs/review/.../B-remaining-repro.test.mjs
+9a21bed7dfdcd6d966e8fff6d4b57b3121c109257ad8ad45f7b19170c09c3934  docs/review/.../B-extra-checks.test.mjs
+b2bfcd255af78bdb6ebdf7f989ba0de507e2534e3c95f8584fe6a4f0d370f86e  docs/review/.../A-remaining-repro.txt
+8d9f6d1deaa216f7b3e0e427fe42b2a2461f7d6890ceb3b5f25c4d1635213a94  docs/review/.../B-remaining-repro.txt
+316f8ccfedf70e91fcddce5b0de9f17a4aeacc275c9327fc8b481d3e7fe289c2  docs/review/.../B-extra-checks.txt
+```
+
+既有截图（只读，不覆盖）：
+
+```text
+docs/codearts_proof/screenshots/A-00-chat-393-v5.png
+docs/codearts_proof/screenshots/C-01-home-393-v3.png
+```
+
+受保护文件还包含：`docs/review/2026-11-13-codearts-repair-check/competition.txt`、`merge24.txt`、`results.json`（沿用原目录，不覆盖）。
+
+仓库状态：本工作区不是 Git 仓库（根目录无 `.git`），因此以“哈希 + 目录清单”作为等价基线，不使用 `git status` / `git reset --hard`。
+
+## T03 服务实例身份核对方法（本阶段只登记，不启动、不探测）
+
+### 8081 前端静态实例
+
+```bash
+curl -s http://127.0.0.1:8081/chat-companion.js | sha256sum
+sha256sum 前端参考/chat-companion.js
+```
+
+判定：两者哈希一致 = 本工作区实例；不一致 = 验收中止并记录“非本工作区实例”。
+失败处置：连接被拒绝/超时 → 记录“环境阻塞：8081 未就绪”，不自行启动或改端口。
+
+### 3000 后端健康检查
+
+```bash
+curl -s http://127.0.0.1:3000/api/health
+```
+
+期望：HTTP 可访问、`db.connected=true`、`ai.configured=false`。
+判定：`db.connected` 非 true → 记录“环境阻塞：数据库未连接”，不重建库、不改 3306。
+`ai.configured=false` → 后续页面文案只能表述为“本地支持回复”，不得称为真实大模型效果。
+失败处置：被沙箱拦截或连接失败 → 保留原文，标注“环境阻塞”。
+
+### 3307 数据库端口与进程
+
+```bash
+netstat -ano | findstr ":3307"
+tasklist /FI "PID eq <PID>"
+```
+
+判定：3307 由本机 MySQL 监听，明确不是 3306；PID 与进程名登记，验收当日二次比对。
+禁止：改回 3306、重建现有库、执行 `initdb` / `DROP` / `TRUNCATE` / `ALTER`。
+
+本阶段不启动、不重启、不探测任何服务；实际探测在 T26 执行。
+
+## T04 测试文件“只追加”锚点
+
+命令原文：
+
+```bash
+grep -c "^test(" 后端源码/scripts/test-chat-companion-repair.test.js
+grep -n "^test(" 后端源码/scripts/test-chat-companion-repair.test.js
+sed -n '483p' 后端源码/scripts/test-chat-companion-repair.test.js
+```
+
+实测：既有用例 **17 条**（`grep -c "^test("` = 17），最后一行 `});`。
+
+用例名与起始行号：
+
+```text
+122  P1-01 closing save during /auth/me keeps the user choice temporary
+145  P1-02 initial preference restore loses to a later explicit close
+161  P1-03 a late auth response for another account does not grant save
+179  P1-04 a reply arriving after clear never re-enters the next temporary request
+207  P1-05 a failed clear keeps the visible turns and context
+230  P1-06 clear then immediate send is not blocked by the old pending request
+255  P1-07 account switch clears A data and sends B as temporary
+278  P1-08 an old saved reply cannot repopulate after account switch
+301  P2-01 an old memory response cannot overwrite a successful clear
+319  P2-02 closing the panel discards a pending memory response
+329  B2 prepare responses cannot replace a newer draft
+354  B3 cancel is terminal and cannot submit a confirmation
+383  B1 confirmation timeout retries the same draft id and renders real data
+411  B4 crisis care is rendered inside the open panel with tel links
+434  B3 error mapping separates cancellation, conflict, expiry and deleted diary
+449  P2-03 a failed clear keeps the server summary and explains the failure
+464  normal confirm still posts once and renders the real diary result
+```
+
+可复用 harness 符号：`El`、`deferred`、`flush`、`setup`、`chatSuccess`、`historyEmpty`、`findButton`。
+纯追加判定：前 483 行哈希不变（`b5c84a35...`，与原始测试文件哈希一致）+ 新增用例从第 484 行开始（以实施后 `wc -l` 与 diff 复核）。
+
+## T05 证据与日志命名规范
+
+本轮计划产出：
+
+| 文件 | 生成任务 | 内容边界 |
+|---|---|---|
+| `logs/2026-11-13-ab-edge-baseline.txt` | T01–T05 | 哈希、行数、保护清单、核对方法，已脱敏 |
+| `logs/2026-11-13-ab-edge-red.log` | T12 | 修复前非 0 退出码与 11 条失败用例摘要，标注“红是预期” |
+| `logs/2026-11-13-ab-edge-green.log` | T13–T19 | 单文件回归逐项转绿记录 |
+| `logs/2026-11-13-ab-edge-competition.log` | T23 | `npm run test:competition` 全文与退出码 |
+| `logs/2026-11-13-ab-edge-merge24.log` | T24 | `npm run test:merge24` 全文与退出码 |
+| `logs/2026-11-13-ab-edge-browser-precheck.log` | T26 | 8081/3000/3307 与账号前置核对（若服务不可用则记录环境阻塞） |
+| `screenshots/2026-11-13-ab-edge/` | T27–T32 | 每张图文件名含检查项；记录中标注“真实服务/控制响应/设备模拟” |
+| `backup/2026-11-13/` | T01 | 修复前副本，不覆盖原文件 |
+| `2026-11-13-AB边界收尾.md` | T33 | 本轮唯一新增证据文档（9 章） |
+
+脱敏规则：日志只记录命令、退出码、用例名、断言摘要；不记录 token、`Authorization`、`Bearer`、密码、手机号、真实账号。截图前清空真实账号与个人内容，只用合成账号与合成文本。
+
+---
+
+基线冻结完成时间：2026-11-13（本机时区）。

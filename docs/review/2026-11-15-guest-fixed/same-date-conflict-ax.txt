@@ -1,0 +1,5 @@
+Browser tab: 1, Title: "微光同行", URL: "http://127.0.0.1:8081/chat.html".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
++			47 text 这一天已有日记，草稿不会覆盖；请换一个日期重新准备。
++			48 button 换日期重新准备
+The focused UI element is 1 AXWebArea 微光同行, URL: 127.0.0.1:8081/chat.html

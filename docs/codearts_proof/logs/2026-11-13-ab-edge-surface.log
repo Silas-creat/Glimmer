@@ -1,0 +1,60 @@
+# 2026-11-13 A/B 边界收尾 · 修改面与只读文件核对（T20–T22）
+
+> 执行目录：`D:\微光同行\Glimmer`
+
+## 测试文件纯追加核对
+
+```text
+原文件行数（wc -l）：482
+当前文件行数：969
+前 482 行逐行一致：是
+当前 ^test( 用例数：36
+原文件 SHA-256：b5c84a35d922342451ca7f4dc1c9edc9f74f12824fc1d5e1d6d0a4a926950e93
+当前文件 SHA-256：ac27b43aaafc29e256c6b97e9075d796ed1a2645d90ddc747e4438ed6f02233f
+```
+
+## 业务文件改动范围
+
+```text
+chat-companion.js 修复前行数（wc -l）：1193
+chat-companion.js 修复后行数（wc -l）：1454
+chat-companion.js 修复前 SHA-256：d919b8385e8e13a36b2f0cca85cce2597595cbd71c76de6dd10a7bad7e726993
+chat-companion.js 修复后 SHA-256：796ef67c8cadd90fe1ed489e406b584bb25c0e29c1f7df8130eb0dbcd7406dd0
+chat-companion.css 当前 SHA-256：bff4294096e6df0b3527f566c7c64b298d4541c0c24eb6a6ac81329884cb2e58
+```
+
+## 只读文件哈希比对（T21）
+
+| 文件 | 实施前 | 当前 | 结论 |
+|---|---|---|---|
+| `前端参考/api.js` | 956755ab29f9cad4a2a31b059c202ccf2e049b34823902346c57f4e84341a626 | 956755ab29f9cad4a2a31b059c202ccf2e049b34823902346c57f4e84341a626 | 未变 |
+| `前端参考/chat-session.js` | bd5710b43ad63984e16485b813514f2572a40ce90a0803a68dc77b3cf6b1af7c | bd5710b43ad63984e16485b813514f2572a40ce90a0803a68dc77b3cf6b1af7c | 未变 |
+| `后端源码/package.json` | 7e0e9eb1450ee71d00fddf8c6d3b3dd0a2573e07e66111eeb87f58bcec2cea04 | 7e0e9eb1450ee71d00fddf8c6d3b3dd0a2573e07e66111eeb87f58bcec2cea04 | 未变 |
+
+## 后端与时序源码文件清单
+
+```text
+后端源码/src 文件数：36
+后端源码/sql 文件数：2
+本轮未对上述目录执行任何写入命令（无 initdb/DROP/TRUNCATE/ALTER 记录）。
+```
+
+## 敏感信息检索（本轮新增日志）
+
+检索范围：`docs/codearts_proof/logs/2026-11-13-ab-edge-*.log` 与 `baseline.txt`。
+检索词：`Authorization`、`Bearer`、`password`、11 位手机号模式。
+
+```text
+命中数：2
+2026-11-13-ab-edge-baseline.txt: Authorization
+2026-11-13-ab-edge-baseline.txt: Bearer
+```
+
+## 结论
+
+1. 测试文件为纯追加：前 482 行未改动，新增用例从第 483 行之后开始。
+2. 业务改动仅落在 `前端参考/chat-companion.js`；样式文件未改。
+3. 只读文件 `api.js`、`chat-session.js`、`package.json` 哈希与实施前一致。
+4. 后端 `src`、`sql` 未写入，未执行数据库 DDL/DML。
+
+补充说明：敏感词检索命中的 2 条均位于 baseline.txt 的“脱敏规则”说明文本中（Authorization、Bearer 作为检索词被列出），不是真实凭证值。本轮日志未出现真实 token、密码或手机号。

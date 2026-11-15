@@ -1,6 +1,6 @@
 # 前端参考
 
-「微光同行」的前端：**17 个原生 HTML 页面 + `ui.css` + 3 个 JS 文件**，没有构建步骤，直接由静态服务器托管即可。
+「微光同行」的前端：**17 个原生 HTML 页面 + `ui.css` + 页面脚本**，没有构建步骤，直接由静态服务器托管即可。
 
 ## 目录
 
@@ -17,28 +17,39 @@
 ├── bless-sent.html       送出 / 收到的祝福
 ├── weiguang.html         微光同行（漂流瓶）
 ├── friend-chat.html      与好友私信
-├── chat.html             AI 陪伴（临时对话，走后端接口）
+├── chat.html             AI 陪伴（临时/保存、历史、记忆、私密日记草稿）
+├── chat-session.js       聊天页会话层（临时/保存请求体、reset、代次）
+├── chat-companion.js     聊天页编排（模式、历史、记忆、清除、草稿预览与确认）
+├── chat-companion.css    聊天页新增控件样式（不影响 ui.css）
 ├── mine.html             我的主页
 ├── my-list.html          我的喜欢 / 收藏
 ├── report-mine.html      举报记录
 ├── settings.html         设置（资料、头像、举报记录入口）
 ├── blank.html            聚合记录页（我的粉丝 / 我的漂流瓶 / 浏览记录，按 ?t= 区分）
-├── api.js                ★ 接口适配层（translate + shapeResult）
-├── chat-session.js       聊天页辅助（临时会话、发送状态）
+├── api.js                ★ 统一请求、鉴权与错误处理
+
 ├── message-links.js      消息内站内跳转链接
 ├── ui.css                公共样式
 ├── assets/               图片素材（日记封面、信纸、日历图标等）
 └── README.md             本文件
 ```
 
-## 接口适配层 `api.js`
+## 请求封装 `api.js`
 
-页面里调用的是适配层路径（如 `api('/diary/public')`），`api.js` 底部的 `translate()` 会映射到后端真实接口（如 `/diary/feed?feed=all`），`shapeResult()` 再把返回字段转换成页面使用的形状（`text→content`、`img→cover`、`dateKey→day`、`isPublic→visibility`、`nick→author.nickname`）。
+页面通过全局 `api(path, options)` 请求服务端，包装器负责 `/api` 前缀、候选服务地址、令牌、JSON 解析与 401 登录处理。当前文件没有 `translate()` 或 `shapeResult()`；旧页面路径及字段兼容由后端 `src/routes/compat.js` 处理。
 
 新增功能时：
 
-- 后端已有对应接口 → 在 `translate()` 里加一条映射；
-- 后端没有 → 需要改后端，接口数量会变化，请同步更新 [`docs/接口文档.md`](../docs/接口文档.md)。
+- 后端已有接口 → 按契约通过 `api()` 调用，如 `/ai/chat`、`/companion/prepare`，不要重复 `/api` 前缀；
+- 新增兼容路径确有必要时再修改后端，并同步更新 [`docs/接口文档.md`](../docs/接口文档.md)；
+- 当前码道任务基于二十四稿合并版，先读 [`码道开始前必读`](../docs/码道开始前必读.md)；chat 页已接入临时/保存、历史续聊、记忆查看与清除、私密日记草稿确认流程。
+
+## 陪伴对话页职责
+
+- `chat.html`：只提供页面骨架与稳定容器（`#chat`、`#input`、`#send`、`#cc-panel`），挂载一次 `ChatCompanion.mountChatCompanion()`。
+- `chat-session.js`：`createTemporaryChat()` 保持“本页最近 16 条、`remember:false`”的旧行为；`createSavedChat()` 发送 `remember:true` 且不携带本页历史；`reset()` 清空下一次请求上下文，`invalidate()` 用于丢弃清除/切模式后的迟到响应。
+- `chat-companion.js`：游客可临时聊天；保存、历史、记忆和草稿要求登录。管理保存偏好 `wg_ai_save_mode_<uid>`、历史分页、记忆空态、清除确认、私密日记草稿材料/预览/确认/取消与错误映射。所有请求经 `api()`，每次显式发送布尔 `remember`。
+- `chat-companion.css`：只新增 `cc-` 前缀样式；`ui.css` 与原有聊天气泡样式不变。
 
 ## 运行
 

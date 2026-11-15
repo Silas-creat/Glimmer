@@ -1,0 +1,8 @@
+Browser tab: 1, Title: "微光同行", URL: "http://127.0.0.1:8081/chat.html".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 47
+~			30 text entry area (disabled) Description: 可编辑的日记正文, Value: 合成账号A验收：今天完成了课程练习，准备散步。
++			49 text 草稿已取消；取消草稿不会删除日记。如需请返回重新准备。
+~			44 button (disabled) 确认保存为私密日记
+~			45 button (disabled) 取消草稿
+The focused UI element is 1 AXWebArea 微光同行, URL: 127.0.0.1:8081/chat.html

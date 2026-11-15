@@ -1,0 +1,28 @@
+{
+  "counts": {
+    "messages": 4,
+    "diaries": 1
+  },
+  "drafts": [
+    {
+      "id": "1770c42a-b348-43e3-9886-a388564b14ee",
+      "status": "confirmed",
+      "date_key": "2026-11-13",
+      "diary_id": 129
+    },
+    {
+      "id": "7c351bbc-3f79-4291-ab29-36f686b56fe7",
+      "status": "cancelled",
+      "date_key": "2026-11-12",
+      "diary_id": null
+    }
+  ],
+  "diaries": [
+    {
+      "id": 129,
+      "date_key": "2026-11-13",
+      "is_public": 0,
+      "text": "今天完成了项目验收，和同学散步后轻松了一点。（测试编辑后的内容）"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+✔ F1: late A verification after storage-switch must not submit A material with B credentials (5.4742ms)
+✖ G1: a guest can send three consecutive messages with unsaved page-local context (2.1288ms)
+✖ G2: a login-only tool must preserve legitimate guest conversation (1.3908ms)
+✖ G3: a guest may retry a failed request without the restored input being discarded (2.2331ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 1
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 78.3908
+
+✖ failing tests:
+
+test at docs\review\2026-11-15-identity-guest\acceptance-boundaries.test.cjs:48:1
+✖ G1: a guest can send three consecutive messages with unsaved page-local context (2.1288ms)
+  AssertionError [ERR_ASSERTION]: second guest message must reach the API
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (D:\微光同行\Glimmer\docs\review\2026-11-15-identity-guest\acceptance-boundaries.test.cjs:53:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at docs\review\2026-11-15-identity-guest\acceptance-boundaries.test.cjs:65:1
+✖ G2: a login-only tool must preserve legitimate guest conversation (1.3908ms)
+  AssertionError [ERR_ASSERTION]: opening history must not erase guest turns
+      at TestContext.<anonymous> (D:\微光同行\Glimmer\docs\review\2026-11-15-identity-guest\acceptance-boundaries.test.cjs:70:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '登录状态已失效，已转为临时对话；本次不保存',
+    expected: /synthetic guest context/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at docs\review\2026-11-15-identity-guest\acceptance-boundaries.test.cjs:78:1
+✖ G3: a guest may retry a failed request without the restored input being discarded (2.2331ms)
+  AssertionError [ERR_ASSERTION]: retry must reach the API
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (D:\微光同行\Glimmer\docs\review\2026-11-15-identity-guest\acceptance-boundaries.test.cjs:88:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

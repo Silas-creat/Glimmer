@@ -91,12 +91,40 @@
   #care a { display: block; color: #386345; }
 </style>
   <link rel="stylesheet" href="ui.css">
+  <link rel="stylesheet" href="chat-companion.css">
 </head>
 <body>
   <div class="page-back" onclick="location.href='index.html'" aria-label="返回">‹</div>
-  <header>微光同行<p class="mode-note">临时对话 · 本页保留上下文，刷新后清空</p><p id="model-status" class="mode-note" role="status">正在连接服务…</p></header>
+  <header>
+    <div>微光同行</div>
+    <p class="mode-note" id="cc-mode-note">临时对话 · 本页保留上下文，刷新后清空</p>
+    <p id="model-status" class="mode-note" role="status">正在连接服务…</p>
+    <div class="cc-modebar">
+      <label class="cc-switch" for="cc-save-toggle">
+        <input id="cc-save-toggle" type="checkbox" />
+        <span>保存对话以便下次继续</span>
+      </label>
+      <span id="cc-save-state" class="cc-state" role="status"></span>
+    </div>
+    <p id="cc-save-hint" class="mode-note">默认按临时对话进行；关闭保存不会删除已存记录。</p>
+  </header>
   <div id="care" role="status" hidden></div>
+  <nav class="cc-tools" id="cc-tools" aria-label="陪伴工具">
+    <button type="button" class="cc-tool" data-cc-action="history">历史对话</button>
+    <button type="button" class="cc-tool" data-cc-action="memory">你记得我什么</button>
+    <button type="button" class="cc-tool" data-cc-action="clear">清除对话和记忆</button>
+    <button type="button" class="cc-tool" data-cc-action="draft">整理成私密日记</button>
+  </nav>
   <div id="chat" role="log" aria-live="polite" aria-label="对话内容"></div>
+  <div id="cc-panel" class="cc-panel" hidden>
+    <div class="cc-sheet" role="dialog" aria-modal="true" aria-labelledby="cc-panel-title">
+      <div class="cc-sheet-head">
+        <h2 id="cc-panel-title">陪伴工具</h2>
+        <button type="button" id="cc-panel-close" class="cc-close" aria-label="关闭">关闭</button>
+      </div>
+      <div id="cc-panel-body" class="cc-sheet-body"></div>
+    </div>
+  </div>
   <footer>
     <input id="input" aria-label="想说的话" placeholder="说点什么…" autocomplete="off" />
     <button id="send">说</button>
@@ -104,89 +132,13 @@
 
 <script src="api.js"></script>
 <script src="chat-session.js"></script>
+<script src="chat-companion.js"></script>
 <script>
-const chatEl = document.getElementById('chat');
-const inputEl = document.getElementById('input');
-const sendEl = document.getElementById('send');
-const statusEl = document.getElementById('model-status');
-const careEl = document.getElementById('care');
-const temporaryChat = createTemporaryChat(api);
-let sending = false;
-
-function addBubble(text, who) {
-  const bubble = document.createElement('div');
-  bubble.className = 'msg ' + who;
-  bubble.textContent = text;
-  chatEl.appendChild(bubble);
-  chatEl.scrollTop = chatEl.scrollHeight;
-  return bubble;
-}
-
-function showProvider(provider, degraded, configuredOnly = false) {
-  statusEl.textContent = provider?.isReal
-    ? (configuredOnly ? '已配置 AI 服务，发送后确认响应' : '已连接 AI 服务')
-    : '当前为本地支持回复，未使用大模型';
-}
-
-function showCare(care) {
-  if (!care) return;
-  careEl.replaceChildren();
-  const text = document.createElement('p');
-  text.textContent = care.message || '如果你现在不安全，请先联系身边可信任的人或当地紧急服务。也可以尝试以下支持渠道：';
-  careEl.appendChild(text);
-  for (const line of care.lines || []) {
-    const phone = String(line.phone || '').replace(/[^\d+()-]/g, '');
-    if (!phone) continue;
-    const link = document.createElement('a');
-    link.href = 'tel:' + phone;
-    link.textContent = (line.name || '支持渠道') + '：' + phone;
-    careEl.appendChild(link);
-  }
-  careEl.hidden = false;
-}
-
-async function send() {
-  const text = inputEl.value.trim();
-  if (!text || sending) return;
-  if (text.length > 2000) {
-    statusEl.textContent = '一次最多 2000 字，可以分开说。';
-    return;
-  }
-  sending = true;
-  sendEl.disabled = true;
-  inputEl.value = '';
-  addBubble(text, 'me');
-  const typing = addBubble('正在回应…', 'typing');
-  try {
-    const result = await temporaryChat.send(text);
-    addBubble(result.reply.content, 'ai');
-    showCare(result.care);
-    showProvider(result.provider, result.degraded);
-  } catch (error) {
-    addBubble(error.message, 'ai');
-    showCare(error.care);
-    if (!inputEl.value) inputEl.value = text;
-  } finally {
-    typing.remove();
-    sending = false;
-    sendEl.disabled = false;
-    inputEl.focus();
-  }
-}
-
-sendEl.addEventListener('click', send);
-inputEl.addEventListener('keydown', event => {
-  if (event.key === 'Enter' && !event.isComposing) {
-    event.preventDefault();
-    send();
-  }
+ChatCompanion.mountChatCompanion({
+  api,
+  createTemporaryChat,
+  createSavedChat,
 });
-addBubble('今天想从哪件小事说起？你可以慢慢说。', 'ai');
-api('/ai/status', { silent401: true }).then(result => {
-  if (result.code === 0) showProvider(result.data, false, true);
-  else statusEl.textContent = result.msg || '暂时无法读取服务状态';
-}).catch(() => { statusEl.textContent = '暂时无法连接服务'; });
-
 </script>
 <script id="__sessionGuard">
 // ============================================================

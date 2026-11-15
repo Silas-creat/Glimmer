@@ -1,0 +1,362 @@
+COMMAND=npm run test:competition
+CWD=后端源码
+STARTED_AT=2026-11-15T11:41:11.318Z
+
+
+> peizhe-server@0.1.0 test:competition
+> node --test scripts/test-ai-session.test.js scripts/test-chat-session.test.js scripts/test-chat-companion.test.js scripts/test-chat-companion-repair.test.js scripts/test-crisis-policy.test.js && node scripts/test-companion.test.js && node scripts/test-moderation.js && node scripts/test-chatbot.js
+
+✖ remember:false isolates stored memory and history and never changes persisted rows (19.5594ms)
+✖ explicit remember:true requires login; omitted remember keeps anonymous and logged-in compatibility (0.4571ms)
+✖ rejects invalid history, roles, lengths, remember types and nonstring messages (0.1955ms)
+✖ clear waits for an in-flight persistent chat and removes all resulting messages (0.1164ms)
+✖ message pair and profile statistics roll back together on assistant write failure (0.1094ms)
+✖ model outage returns explicit fallback and deterministic crisis care (0.0446ms)
+✖ background summary does not delay chat or clear and cannot restore cleared memory (0.0349ms)
+✖ queued persistent chats see the preceding committed reply and ignore client-supplied history (0.0558ms)
+✖ background summary advances the message id cursor and preserves the recent tail (0.0737ms)
+✖ missing API key uses explicit local mode without loopback or external model traffic (0.0614ms)
+✖ old summary cannot replace memory after clearing and beginning a new persistent conversation (0.0287ms)
+✔ P1-01 closing save during /auth/me keeps the user choice temporary (4.8525ms)
+✔ P1-02 initial preference restore loses to a later explicit close (1.5373ms)
+✔ P1-03 a late auth response for another account does not grant save (1.4816ms)
+✔ P1-04 a reply arriving after clear never re-enters the next temporary request (2.5966ms)
+✔ P1-05 a failed clear keeps the visible turns and context (1.9496ms)
+✔ P1-06 clear then immediate send is not blocked by the old pending request (2.149ms)
+✔ P1-07 account switch clears A data and sends B as temporary (1.8079ms)
+✔ P1-08 an old saved reply cannot repopulate after account switch (1.9564ms)
+✔ P2-01 an old memory response cannot overwrite a successful clear (4.3123ms)
+✔ P2-02 closing the panel discards a pending memory response (1.6633ms)
+✔ B2 prepare responses cannot replace a newer draft (3.2787ms)
+✔ B3 cancel is terminal and cannot submit a confirmation (1.4774ms)
+✔ B1 confirmation timeout retries the same draft id and renders real data (1.7878ms)
+✔ B4 crisis care is rendered inside the open panel with tel links (2.752ms)
+✔ B3 error mapping separates cancellation, conflict, expiry and deleted diary (0.1786ms)
+✔ P2-03 a failed clear keeps the server summary and explains the failure (1.0991ms)
+✔ normal confirm still posts once and renders the real diary result (1.2693ms)
+✔ EDGE-R1-01 draft material is bound to the selecting account before prepare (1.5685ms)
+✔ EDGE-R1-02 same-account token refresh still prepares exactly once (1.3337ms)
+✔ EDGE-R1-03 confirm does not submit A draft after credentials switch to B without storage (1.4348ms)
+✔ EDGE-R1-04 a late prepare response cannot land after credentials switch to B (1.2377ms)
+✔ EDGE-R2-01 memory opened during pending clear cannot restore the cleared summary (1.2817ms)
+✔ EDGE-R2-02 a successful clear invalidates an already rendered old summary (1.1927ms)
+✔ EDGE-R2-03 a successful clear leaves an open draft editor untouched (1.1509ms)
+✔ EDGE-R3-01 a late clear success for A cannot wipe B page or announce B cleared (2.0494ms)
+✔ EDGE-R3-02 closing the clear panel still clears the same account context (1.4749ms)
+✔ EDGE-R3-03 a late clear failure for A cannot show on B page (1.3168ms)
+✔ EDGE-R4-01 an obsolete send cannot unlock a newer pending send (1.2494ms)
+✔ EDGE-R4-02 double click during identity verification sends only once (1.025ms)
+✔ EDGE-R4-03 a late send failure for A cannot overwrite B input or notice (1.1693ms)
+✔ EDGE-R5-01 confirm success shows full care inside the open dialog (1.2881ms)
+✔ EDGE-R5-02 recovered confirm success also shows full care in the dialog (1.9339ms)
+✔ EDGE-R5-03 confirm success without care renders no care block or tel link (1.4662ms)
+✔ EDGE-R6-01 crisis prepare stops generation with care and return entry (1.5842ms)
+✔ EDGE-R6-02 a failed prepare is retryable and is not a stopped terminal (1.8845ms)
+✔ EDGE-R6-03 stopped care does not leak into the next account page (1.4961ms)
+✔ EDGE-R7-01 a late auth response after storage-switch cannot submit A draft material (1.3433ms)
+✔ EDGE-R7-02 a pending verification cannot prepare after the panel is closed (2.045ms)
+✔ EDGE-R7-03 a valid same-account token refresh prepares exactly once (1.9744ms)
+✔ EDGE-R7-04 a late auth response cannot confirm A draft on B credentials (1.482ms)
+✔ EDGE-R7-05 a late auth response cannot cancel A draft on B credentials (1.9849ms)
+✔ EDGE-R7-06 a late auth response cannot send A text on B credentials (1.5035ms)
+✔ EDGE-R7-07 a late restore verification cannot write A history into B page (1.4571ms)
+✔ EDGE-R7-08 a verification that outlives a second token refresh cannot prepare (1.2195ms)
+✔ EDGE-R7-09 a late prepare response cannot land after the panel is closed (1.4573ms)
+✔ EDGE-R8-01 a guest can send a temporary unsaved chat without verification (1.5887ms)
+✔ EDGE-R8-02 a guest refresh clears anonymous turns and can send again (2.1988ms)
+✔ EDGE-R8-03 a guest cannot enable saved mode (1.0786ms)
+✔ EDGE-R8-04 a guest history memory draft entry asks for login without data (1.7254ms)
+✔ EDGE-R8-05 token removal isolates A context before a guest send (1.8445ms)
+✔ EDGE-R8-06 logout clears draft and memory then allows guest send (1.5223ms)
+✔ EDGE-R8-07 an old signed-in reply cannot land after logout (3.5936ms)
+✔ EDGE-R8-08 guest-to-login does not reuse anonymous content or enable saving (1.2676ms)
+✔ EDGE-R8-09 a guest double click sends only one request (0.9869ms)
+✔ EDGE-R8-10 a failed guest send keeps the text and writes no history (0.9825ms)
+✔ EDGE-R9-01 a guest can send three consecutive messages with page-local context (1.1366ms)
+✔ EDGE-R9-02 a guest refresh clears page-local conversation and keeps sending possible (2.6344ms)
+✔ EDGE-R9-03 a guest retry after a failed send reaches the API (1.4269ms)
+✔ EDGE-R9-04 guest history entry only asks login and keeps the conversation (1.1521ms)
+✔ EDGE-R9-05 guest memory entry only asks login and keeps the conversation (2.1327ms)
+✔ EDGE-R9-06 guest clear entry only asks login and keeps the conversation (1.4129ms)
+✔ EDGE-R9-07 guest draft entry only asks login and keeps the conversation (1.0845ms)
+✔ EDGE-R9-08 closing a login-only panel lets the guest continue chatting (1.1839ms)
+✔ EDGE-R9-09 a guest send keeps working while a login-only panel is open (1.469ms)
+✔ EDGE-R9-10 real logout still isolates the previous account context (1.5539ms)
+✔ EDGE-R9-11 token removal with user still present isolates before guest chat (1.2775ms)
+✔ EDGE-R9-12 account switch still isolates the previous account context (1.0739ms)
+✔ EDGE-R9-13 a guest double click still sends only one request (1.1661ms)
+✔ saved chat sends explicit remember:true with an empty client history (1.6523ms)
+✔ temporary reset clears the next request history without changing the request shape (0.2157ms)
+✔ invalidate makes an in-flight response stale without changing the protocol (0.1305ms)
+✔ save preference is scoped to the current uid and defaults to off (0.1875ms)
+✔ user id accepts both uid and id and never leaks other fields (0.1163ms)
+✔ draft material keeps the selected order and rejects empty or over-2000 content (0.1502ms)
+✔ draft text validation allows 5000 and rejects 5001 UTF-16 units (0.1814ms)
+✔ local date key uses calendar fields instead of UTC (0.8849ms)
+✔ older history pages are prepended and de-duplicated by id (0.1704ms)
+✔ draft error codes map to actionable states (0.222ms)
+✔ only same-site diary write links are accepted (0.3468ms)
+✔ provider status never presents the local fallback as a real model (0.1504ms)
+✔ temporary chat sends explicit no-memory consent and retains only completed turns (2.2163ms)
+✔ a second submit cannot create another request while the first reply is pending (0.6203ms)
+✔ failed turns preserve care but are excluded from later model context (0.2657ms)
+✔ history stays within the backend limit and long input never leaves the client (0.3143ms)
+✔ long model replies remain fully visible without breaking subsequent history requests (0.2422ms)
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截公开日记 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截公开日记 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截公开日记 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截评论 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截评论 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截评论 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [刷屏] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  💚 群 interest 检测到危机信号，机器人已发关怀提示
+  🤖 群 interest 拦截消息 [人身攻击] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 群 interest 拦截消息 [刷屏] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  ✿ synthetic → synthetic target：我不想活了
+  🤖 拦截祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  ✿ synthetic → synthetic target：今天很难过，想找个人聊聊
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🍾 synthetic 扔了一个瓶子：我不想活了
+  🤖 拦截漂流瓶 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截漂流瓶 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🍾 synthetic 扔了一个瓶子：今天很难过，想找个人聊聊
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截瓶子祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+✔ crisis remains visible when advertising matches first (1.3269ms)
+✔ mixed crisis never hides another moderation category (1.004ms)
+✔ group bot preserves both flags and the existing penalty tiers (0.343ms)
+✔ public diary blocks mixed advertising while returning care (2.3843ms)
+✔ public diary allows pure crisis with care (1.7548ms)
+✔ public diary does not let crisis cancel attacks or spam (0.5662ms)
+✔ public diary keeps ordinary sadness and advertising separate (0.6268ms)
+✔ new comment blocks mixed advertising while returning care (0.7446ms)
+✔ new comment allows pure crisis with care (0.709ms)
+✔ new comment does not let crisis cancel attacks or spam (0.7194ms)
+✔ new comment keeps ordinary sadness and advertising separate (0.5928ms)
+✔ edited comment blocks mixed advertising while returning care (0.2702ms)
+✔ edited comment allows pure crisis with care (0.2431ms)
+✔ edited comment does not let crisis cancel attacks or spam (0.3815ms)
+✔ edited comment keeps ordinary sadness and advertising separate (0.2477ms)
+✔ private message blocks mixed advertising while returning care (0.6482ms)
+✔ private message allows pure crisis with care (0.299ms)
+✔ private message does not let crisis cancel attacks or spam (1.1345ms)
+✔ private message keeps ordinary sadness and advertising separate (0.2035ms)
+✔ group message blocks mixed advertising while returning care (0.4708ms)
+✔ group message allows pure crisis with care (0.284ms)
+✔ group message does not let crisis cancel attacks or spam (0.2852ms)
+✔ group message keeps ordinary sadness and advertising separate (0.1801ms)
+✔ blessing blocks mixed advertising while returning care (0.9625ms)
+✔ blessing allows pure crisis with care (0.9568ms)
+✔ blessing does not let crisis cancel attacks or spam (0.4168ms)
+✔ blessing keeps ordinary sadness and advertising separate (0.3681ms)
+✔ bottle toss blocks mixed advertising while returning care (0.246ms)
+✔ bottle toss allows pure crisis with care (0.1732ms)
+✔ bottle toss does not let crisis cancel attacks or spam (0.1471ms)
+✔ bottle toss keeps ordinary sadness and advertising separate (0.1312ms)
+✔ bottle blessing blocks mixed advertising while returning care (0.1797ms)
+✔ bottle blessing allows pure crisis with care (0.0698ms)
+✔ bottle blessing does not let crisis cancel attacks or spam (0.1135ms)
+✔ bottle blessing keeps ordinary sadness and advertising separate (0.0885ms)
+✔ publicizing a private mixed diary cannot bypass moderation (0.1939ms)
+✔ private diary retains mixed content with care (0.1621ms)
+✔ visibility permits a pure crisis and still permits making mixed content private (0.1116ms)
+✔ visibility cannot publish mixed content saved after its moderation snapshot (0.4833ms)
+✔ visibility detects concurrent visibility changes even when text is unchanged (0.2093ms)
+✔ ordinary sadness and advertising alone do not trigger crisis care (0.1366ms)
+ℹ tests 137
+ℹ suites 0
+ℹ pass 126
+ℹ fail 11
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 433.4655
+
+✖ failing tests:
+
+test at scripts\test-ai-session.test.js:97:1
+✖ remember:false isolates stored memory and history and never changes persisted rows (19.5594ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:108:1
+✖ explicit remember:true requires login; omitted remember keeps anonymous and logged-in compatibility (0.4571ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:115:1
+✖ rejects invalid history, roles, lengths, remember types and nonstring messages (0.1955ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:126:1
+✖ clear waits for an in-flight persistent chat and removes all resulting messages (0.1164ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:140:1
+✖ message pair and profile statistics roll back together on assistant write failure (0.1094ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:148:1
+✖ model outage returns explicit fallback and deterministic crisis care (0.0446ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:157:1
+✖ background summary does not delay chat or clear and cannot restore cleared memory (0.0349ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:170:1
+✖ queued persistent chats see the preceding committed reply and ignore client-supplied history (0.0558ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:183:1
+✖ background summary advances the message id cursor and preserves the recent tail (0.0737ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:197:1
+✖ missing API key uses explicit local mode without loopback or external model traffic (0.0614ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+test at scripts\test-ai-session.test.js:208:1
+✖ old summary cannot replace memory after clearing and beginning a new persistent conversation (0.0287ms)
+  Error: connect ECONNREFUSED 127.0.0.1:3307
+      at insert (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:59:31)
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-ai-session.test.js:71:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestHook.run (node:internal/test_runner/test:1409:7) {
+    errno: -4078,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3307,
+    fatal: true
+  }
+
+EXIT_CODE=1

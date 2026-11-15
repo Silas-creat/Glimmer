@@ -1,0 +1,32 @@
+Browser tab: 1, Title: "微光同行", URL: "http://127.0.0.1:8081/chat.html".
+0 AXWebArea 微光同行, URL: 127.0.0.1:8081/chat.html
+	1 container 返回
+		2 text ‹
+	3 container
+		4 text 微光同行
+		5 text 临时对话 · 本页保留上下文，刷新后清空
+		32 text 本地支持回复，未使用大模型
+		7 checkbox (settable, integer) Description: 保存对话以便下次继续, Value: 0, ID: cc-save-toggle
+		8 text 保存对话以便下次继续
+		33 text 本次未保存；临时对话刷新后清空
+		9 text 默认按临时对话进行；关闭保存不会删除已存记录。
+	10 container Description: 陪伴工具, ID: cc-tools
+		11 button 历史对话
+		12 button 你记得我什么
+		13 button 清除对话和记忆
+		14 button 整理成私密日记
+	15 container Description: 对话内容, ID: chat
+		16 text 今天想从哪件小事说起？你可以慢慢说。
+		22 text 补修验收第一轮：今天完成了一件小事。
+		23 text 我在听。你愿意的话，可以慢慢说。
+		26 text 补修验收第二轮：接着记录另一件小事。
+		27 text 我在听。你愿意的话，可以慢慢说。
+		30 text 补修验收第三轮：三轮都应该保留在本页。
+		31 text 我在听。你愿意的话，可以慢慢说。
+		34 text 补修验收第四轮：关闭工具后还能继续。
+		35 text 我在听。你愿意的话，可以慢慢说。
+	17 container
+		18 text field (settable) Description: 想说的话, ID: input
+		19 button 说, ID: send
+
+The focused UI element is 18 text field (settable) Description: 想说的话, ID: input

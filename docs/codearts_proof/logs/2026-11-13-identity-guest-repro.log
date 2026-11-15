@@ -1,0 +1,19 @@
+COMMAND=node docs/review/2026-11-13-final-acceptance/identity-boundary-repro.cjs
+CWD=仓库根
+STARTED_AT=2026-11-13T13:54:05.511Z
+SEMANTICS=退出 0 表示缺陷仍存在；非 0 表示原断言未被满足（原路径不再复现），不等于浏览器验收。
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+0 !== 1
+
+    at run (D:\微光同行\Glimmer\docs\review\2026-11-13-final-acceptance\identity-boundary-repro.cjs:31:10) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+EXIT_CODE=1

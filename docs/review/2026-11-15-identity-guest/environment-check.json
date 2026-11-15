@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-11-15T18:49:40.9195513+08:00",
+  "sourceHash": "854EEB95CB6A9A4070F0C39C2F7705E3C01CFA0DF69C582E43C688FD839224B6",
+  "repairTestHash": "F3574FF05C56B7EE0D0704E3FE2D4B2C189E47AD84E7B6DD1419CCD0D6F02559",
+  "dbConnected": true,
+  "dbVersion": "8.4.13",
+  "aiConfigured": false,
+  "npmStrictSsl": "true",
+  "extraCAConfigured": false,
+  "tlsValidationDisabled": false,
+  "acceptanceTests": {
+    "passed": 1,
+    "failed": 3,
+    "exitCode": 1
+  },
+  "browserAcceptance": "blocked-by-guest-second-message-bug"
+}

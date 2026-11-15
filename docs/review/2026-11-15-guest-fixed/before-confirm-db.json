@@ -1,0 +1,30 @@
+[
+  {
+    "label": "A",
+    "messages": [
+      {
+        "role": "user",
+        "content": "合成账号A验收：今天完成了课程练习，准备散步。"
+      },
+      {
+        "role": "assistant",
+        "content": "我在听。你愿意的话，可以慢慢说。"
+      }
+    ],
+    "drafts": [
+      {
+        "id": "0497e530-0369-460a-b1de-cb07731e218f",
+        "status": "pending",
+        "date_key": "2026-11-15",
+        "diary_id": null
+      }
+    ],
+    "diaries": []
+  },
+  {
+    "label": "B",
+    "messages": [],
+    "drafts": [],
+    "diaries": []
+  }
+]

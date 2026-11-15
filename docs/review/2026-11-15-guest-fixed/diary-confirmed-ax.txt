@@ -1,0 +1,36 @@
+Browser tab: 1, Title: "微光同行", URL: "http://127.0.0.1:8081/chat.html".
+1 AXWebArea 微光同行, URL: 127.0.0.1:8081/chat.html
+	2 container 返回
+		3 text ‹
+	4 container
+		5 text 微光同行
+		6 text 保存对话 · 已存到本人账号，刷新后可继续
+		7 text 当前为本地支持回复，未使用大模型
+		8 checkbox (settable, integer) Description: 保存对话以便下次继续, Value: 1, ID: cc-save-toggle
+		9 text 保存对话以便下次继续
+		10 text 关闭保存不会删除已存记录；要删除请用“清除对话和记忆”。
+	11 container Description: 陪伴工具, ID: cc-tools
+		12 button 历史对话
+		13 button 你记得我什么
+		14 button 清除对话和记忆
+		15 button 整理成私密日记
+	16 container Description: 对话内容, ID: chat
+		17 text 合成账号A验收：今天完成了课程练习，准备散步。
+		18 text 我在听。你愿意的话，可以慢慢说。
+	22 container 整理成私密日记
+		23 heading 整理成私密日记, Value: 2, ID: cc-panel-title
+			24 text 整理成私密日记
+		25 button Description: 关闭, ID: cc-panel-close
+		26 container cc-panel-body
+			27 text 已保存为私密日记。
+			28 text 日记编号：207
+			29 text 日期：2026-11-15
+			30 text 可见性：私密
+			31 link Description: 打开这篇日记, Value: 127.0.0.1:8081/diary-write.html?date=2026-11-15
+			32 button 关闭
+			33 button 再整理一段
+	19 container
+		20 text field (settable) Description: 想说的话, ID: input
+		21 button 说, ID: send
+
+The focused UI element is 1 AXWebArea 微光同行, URL: 127.0.0.1:8081/chat.html

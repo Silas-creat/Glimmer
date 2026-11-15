@@ -1,0 +1,187 @@
+COMMAND=npm run test:competition
+CWD=后端源码
+STARTED_AT=2026-11-13T13:53:56.617Z
+
+
+> peizhe-server@0.1.0 test:competition
+> node --test scripts/test-ai-session.test.js scripts/test-chat-session.test.js scripts/test-chat-companion.test.js scripts/test-chat-companion-repair.test.js scripts/test-crisis-policy.test.js && node scripts/test-companion.test.js && node scripts/test-moderation.js && node scripts/test-chatbot.js
+
+Synthetic AI session user id: 115
+✔ remember:false isolates stored memory and history and never changes persisted rows (89.2849ms)
+✔ explicit remember:true requires login; omitted remember keeps anonymous and logged-in compatibility (34.7223ms)
+✔ rejects invalid history, roles, lengths, remember types and nonstring messages (24.1266ms)
+✔ clear waits for an in-flight persistent chat and removes all resulting messages (143.6949ms)
+✔ message pair and profile statistics roll back together on assistant write failure (16.3686ms)
+✔ model outage returns explicit fallback and deterministic crisis care (5.8549ms)
+✔ background summary does not delay chat or clear and cannot restore cleared memory (211.2734ms)
+✔ queued persistent chats see the preceding committed reply and ignore client-supplied history (87.8355ms)
+✔ background summary advances the message id cursor and preserves the recent tail (67.9455ms)
+✔ missing API key uses explicit local mode without loopback or external model traffic (7.6495ms)
+✔ old summary cannot replace memory after clearing and beginning a new persistent conversation (163.728ms)
+✔ P1-01 closing save during /auth/me keeps the user choice temporary (3.986ms)
+✔ P1-02 initial preference restore loses to a later explicit close (1.6654ms)
+✔ P1-03 a late auth response for another account does not grant save (1.3991ms)
+✔ P1-04 a reply arriving after clear never re-enters the next temporary request (1.8973ms)
+✔ P1-05 a failed clear keeps the visible turns and context (1.4475ms)
+✔ P1-06 clear then immediate send is not blocked by the old pending request (1.4998ms)
+✔ P1-07 account switch clears A data and sends B as temporary (1.6981ms)
+✔ P1-08 an old saved reply cannot repopulate after account switch (1.5421ms)
+✔ P2-01 an old memory response cannot overwrite a successful clear (2.1161ms)
+✔ P2-02 closing the panel discards a pending memory response (1.6577ms)
+✔ B2 prepare responses cannot replace a newer draft (4.1936ms)
+✔ B3 cancel is terminal and cannot submit a confirmation (1.6026ms)
+✔ B1 confirmation timeout retries the same draft id and renders real data (3.3143ms)
+✔ B4 crisis care is rendered inside the open panel with tel links (1.57ms)
+✔ B3 error mapping separates cancellation, conflict, expiry and deleted diary (0.2038ms)
+✔ P2-03 a failed clear keeps the server summary and explains the failure (1.1712ms)
+✔ normal confirm still posts once and renders the real diary result (1.2495ms)
+✔ EDGE-R1-01 draft material is bound to the selecting account before prepare (1.203ms)
+✔ EDGE-R1-02 same-account token refresh still prepares exactly once (1.2156ms)
+✔ EDGE-R1-03 confirm does not submit A draft after credentials switch to B without storage (1.3912ms)
+✔ EDGE-R1-04 a late prepare response cannot land after credentials switch to B (1.1455ms)
+✔ EDGE-R2-01 memory opened during pending clear cannot restore the cleared summary (1.0538ms)
+✔ EDGE-R2-02 a successful clear invalidates an already rendered old summary (1.0759ms)
+✔ EDGE-R2-03 a successful clear leaves an open draft editor untouched (1.2156ms)
+✔ EDGE-R3-01 a late clear success for A cannot wipe B page or announce B cleared (1.2682ms)
+✔ EDGE-R3-02 closing the clear panel still clears the same account context (1.162ms)
+✔ EDGE-R3-03 a late clear failure for A cannot show on B page (1.2299ms)
+✔ EDGE-R4-01 an obsolete send cannot unlock a newer pending send (1.184ms)
+✔ EDGE-R4-02 double click during identity verification sends only once (1.0909ms)
+✔ EDGE-R4-03 a late send failure for A cannot overwrite B input or notice (1.0433ms)
+✔ EDGE-R5-01 confirm success shows full care inside the open dialog (1.1916ms)
+✔ EDGE-R5-02 recovered confirm success also shows full care in the dialog (1.2194ms)
+✔ EDGE-R5-03 confirm success without care renders no care block or tel link (1.1064ms)
+✔ EDGE-R6-01 crisis prepare stops generation with care and return entry (1.2466ms)
+✔ EDGE-R6-02 a failed prepare is retryable and is not a stopped terminal (1.2863ms)
+✔ EDGE-R6-03 stopped care does not leak into the next account page (1.2689ms)
+✔ EDGE-R7-01 a late auth response after storage-switch cannot submit A draft material (1.3097ms)
+✔ EDGE-R7-02 a pending verification cannot prepare after the panel is closed (1.2188ms)
+✔ EDGE-R7-03 a valid same-account token refresh prepares exactly once (1.1482ms)
+✔ EDGE-R7-04 a late auth response cannot confirm A draft on B credentials (1.3659ms)
+✔ EDGE-R7-05 a late auth response cannot cancel A draft on B credentials (1.254ms)
+✔ EDGE-R7-06 a late auth response cannot send A text on B credentials (1.0517ms)
+✔ EDGE-R7-07 a late restore verification cannot write A history into B page (1.0223ms)
+✔ EDGE-R7-08 a verification that outlives a second token refresh cannot prepare (1.2351ms)
+✔ EDGE-R7-09 a late prepare response cannot land after the panel is closed (1.2806ms)
+✔ EDGE-R8-01 a guest can send a temporary unsaved chat without verification (1.1559ms)
+✔ EDGE-R8-02 a guest refresh clears anonymous turns and can send again (1.9139ms)
+✔ EDGE-R8-03 a guest cannot enable saved mode (0.9389ms)
+✔ EDGE-R8-04 a guest history memory draft entry asks for login without data (1.1164ms)
+✔ EDGE-R8-05 token removal isolates A context before a guest send (1.0969ms)
+✔ EDGE-R8-06 logout clears draft and memory then allows guest send (2.6318ms)
+✔ EDGE-R8-07 an old signed-in reply cannot land after logout (1.2255ms)
+✔ EDGE-R8-08 guest-to-login does not reuse anonymous content or enable saving (1.0197ms)
+✔ EDGE-R8-09 a guest double click sends only one request (1.0178ms)
+✔ EDGE-R8-10 a failed guest send keeps the text and writes no history (1.0414ms)
+✔ saved chat sends explicit remember:true with an empty client history (1.3266ms)
+✔ temporary reset clears the next request history without changing the request shape (0.2199ms)
+✔ invalidate makes an in-flight response stale without changing the protocol (0.1259ms)
+✔ save preference is scoped to the current uid and defaults to off (0.1581ms)
+✔ user id accepts both uid and id and never leaks other fields (0.0919ms)
+✔ draft material keeps the selected order and rejects empty or over-2000 content (0.1365ms)
+✔ draft text validation allows 5000 and rejects 5001 UTF-16 units (0.1882ms)
+✔ local date key uses calendar fields instead of UTC (1.0064ms)
+✔ older history pages are prepended and de-duplicated by id (0.2125ms)
+✔ draft error codes map to actionable states (0.2639ms)
+✔ only same-site diary write links are accepted (0.3578ms)
+✔ provider status never presents the local fallback as a real model (0.1505ms)
+✔ temporary chat sends explicit no-memory consent and retains only completed turns (2.2508ms)
+✔ a second submit cannot create another request while the first reply is pending (0.6568ms)
+✔ failed turns preserve care but are excluded from later model context (0.1804ms)
+✔ history stays within the backend limit and long input never leaves the client (0.2469ms)
+✔ long model replies remain fully visible without breaking subsequent history requests (0.2058ms)
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截公开日记 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截公开日记 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截公开日记 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截评论 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截评论 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截评论 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [刷屏] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  💚 群 interest 检测到危机信号，机器人已发关怀提示
+  🤖 群 interest 拦截消息 [人身攻击] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 群 interest 拦截消息 [刷屏] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  ✿ synthetic → synthetic target：我不想活了
+  🤖 拦截祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  ✿ synthetic → synthetic target：今天很难过，想找个人聊聊
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🍾 synthetic 扔了一个瓶子：我不想活了
+  🤖 拦截漂流瓶 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截漂流瓶 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🍾 synthetic 扔了一个瓶子：今天很难过，想找个人聊聊
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截瓶子祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+✔ crisis remains visible when advertising matches first (0.9214ms)
+✔ mixed crisis never hides another moderation category (0.794ms)
+✔ group bot preserves both flags and the existing penalty tiers (0.3198ms)
+✔ public diary blocks mixed advertising while returning care (1.4876ms)
+✔ public diary allows pure crisis with care (0.9256ms)
+✔ public diary does not let crisis cancel attacks or spam (0.4558ms)
+✔ public diary keeps ordinary sadness and advertising separate (0.4176ms)
+✔ new comment blocks mixed advertising while returning care (0.474ms)
+✔ new comment allows pure crisis with care (0.4093ms)
+✔ new comment does not let crisis cancel attacks or spam (0.3252ms)
+✔ new comment keeps ordinary sadness and advertising separate (0.2574ms)
+✔ edited comment blocks mixed advertising while returning care (0.1738ms)
+✔ edited comment allows pure crisis with care (0.0977ms)
+✔ edited comment does not let crisis cancel attacks or spam (0.1093ms)
+✔ edited comment keeps ordinary sadness and advertising separate (0.1018ms)
+✔ private message blocks mixed advertising while returning care (0.3597ms)
+✔ private message allows pure crisis with care (0.2219ms)
+✔ private message does not let crisis cancel attacks or spam (0.2394ms)
+✔ private message keeps ordinary sadness and advertising separate (0.1622ms)
+✔ group message blocks mixed advertising while returning care (0.4461ms)
+✔ group message allows pure crisis with care (0.281ms)
+✔ group message does not let crisis cancel attacks or spam (0.2363ms)
+✔ group message keeps ordinary sadness and advertising separate (0.1661ms)
+✔ blessing blocks mixed advertising while returning care (0.2507ms)
+✔ blessing allows pure crisis with care (0.3555ms)
+✔ blessing does not let crisis cancel attacks or spam (0.1575ms)
+✔ blessing keeps ordinary sadness and advertising separate (0.2592ms)
+✔ bottle toss blocks mixed advertising while returning care (0.2523ms)
+✔ bottle toss allows pure crisis with care (0.1691ms)
+✔ bottle toss does not let crisis cancel attacks or spam (0.1542ms)
+✔ bottle toss keeps ordinary sadness and advertising separate (0.1366ms)
+✔ bottle blessing blocks mixed advertising while returning care (0.1844ms)
+✔ bottle blessing allows pure crisis with care (0.0769ms)
+✔ bottle blessing does not let crisis cancel attacks or spam (0.1274ms)
+✔ bottle blessing keeps ordinary sadness and advertising separate (0.0888ms)
+✔ publicizing a private mixed diary cannot bypass moderation (0.1893ms)
+✔ private diary retains mixed content with care (0.152ms)
+✔ visibility permits a pure crisis and still permits making mixed content private (0.1201ms)
+✔ visibility cannot publish mixed content saved after its moderation snapshot (0.4281ms)
+✔ visibility detects concurrent visibility changes even when text is unchanged (0.1731ms)
+✔ ordinary sadness and advertising alone do not trigger crisis care (0.1149ms)
+ℹ tests 124
+ℹ suites 0
+ℹ pass 124
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1312.4101
+Sandbox Network Error: hit restricted [127.0.0.1:3307]
+COMPANION FAILED after 0 checks: Error: connect ENETUNREACH 127.0.0.1:3307 - Local (0.0.0.0:55162)
+    at query (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/src/db/index.js:43:29)
+    at file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/%E5%90%8E%E7%AB%AF%E6%BA%90%E7%A0%81/scripts/test-companion.test.js:26:18
+
+EXIT_CODE=1

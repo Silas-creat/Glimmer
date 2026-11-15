@@ -1,0 +1,18 @@
+COMMAND=node --test --test-timeout=5000 --test-reporter=spec docs/review/2026-11-15-identity-guest/acceptance-boundaries.test.cjs
+CWD=仓库根
+STARTED_AT=2026-11-15T11:34:13.911Z
+
+✔ F1: late A verification after storage-switch must not submit A material with B credentials (11.2326ms)
+✔ G1: a guest can send three consecutive messages with unsaved page-local context (3.5453ms)
+✔ G2: a login-only tool must preserve legitimate guest conversation (3.0057ms)
+✔ G3: a guest may retry a failed request without the restored input being discarded (4.3666ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 222.9693
+
+EXIT_CODE=0

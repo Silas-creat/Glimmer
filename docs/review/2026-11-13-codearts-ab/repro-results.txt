@@ -1,0 +1,7 @@
+A1 REPRO: user toggled OFF during auth, late response re-enabled SAVED and persisted on.
+A2 REPRO: next temporary request includes 2 cleared messages after old response settles.
+A3 REPRO: B has no save consent, but existing A page sends remember:true using B token.
+A4 REPRO: old memory GET overwrites successful clear panel with the cleared summary.
+REPRODUCED recovery: confirmed is rendered with diaryId=null and url=null; no idempotent POST retry.
+REPRODUCED prepare race: late first request replaces newer draft/preview.
+REPRODUCED cancelled state: confirm still submits; cancellation error shown as same-date diary conflict.

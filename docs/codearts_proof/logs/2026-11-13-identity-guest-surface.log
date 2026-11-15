@@ -1,0 +1,53 @@
+# 2026-11-13 身份核验与游客聊天加固 · 修改面与只读文件核对（T22–T24）
+
+> 执行目录：`D:\微光同行\Glimmer`
+
+## 测试文件纯追加核对
+
+```text
+追加前行数（wc -l）：969
+当前行数：1383
+前 969 行逐行一致：是
+当前 ^test( 用例数：55
+追加前 SHA-256：ac27b43aaafc29e256c6b97e9075d796ed1a2645d90ddc747e4438ed6f02233f
+当前 SHA-256：f3574ff05c56b7ee0d0704e3fe2d4b2c189e47ad84e7b6dd1419ccd0d6f02559
+```
+
+## 业务文件改动范围
+
+```text
+chat-companion.js 修复前行数：1454
+chat-companion.js 修复后行数：1744
+chat-companion.js 修复前 SHA-256：796ef67c8cadd90fe1ed489e406b584bb25c0e29c1f7df8130eb0dbcd7406dd0
+chat-companion.js 修复后 SHA-256：854eeb95cb6a9a4070f0c39c2f7705e3c01cfa0df69c582e43c688fd839224b6
+chat-companion.css 当前 SHA-256：bff4294096e6df0b3527f566c7c64b298d4541c0c24eb6a6ac81329884cb2e58
+```
+
+## 只读文件哈希比对（与任务规划基线 0.1 对照）
+
+| 文件 | 当前 SHA-256 | 结论 |
+|---|---|---|
+| `前端参考/api.js` | 956755ab29f9cad4a2a31b059c202ccf2e049b34823902346c57f4e84341a626 | 未变 |
+| `前端参考/chat-session.js` | bd5710b43ad63984e16485b813514f2572a40ce90a0803a68dc77b3cf6b1af7c | 未变 |
+| `后端源码/package.json` | 7e0e9eb1450ee71d00fddf8c6d3b3dd0a2573e07e66111eeb87f58bcec2cea04 | 未变 |
+
+## 后端与时序源码文件清单
+
+```text
+后端源码/src 文件数：36
+后端源码/sql 文件数：2
+本轮未对上述目录执行写入、未执行 initdb/DROP/TRUNCATE/ALTER。
+```
+
+## 脱敏检索（本轮新增日志）
+
+```text
+命中数：0
+```
+
+## 结论
+
+1. 测试文件为纯追加：前 969 行未改动，新增 19 条从第 970 行之后开始，总数 55 条。
+2. 业务改动仅落在 `前端参考/chat-companion.js`；样式文件未改。
+3. 只读前端/脚本文件哈希与基线一致；后端 `src`/`sql` 未写入。
+4. 日志未出现真实凭证明文、JWT 或 11 位手机号。

@@ -1,0 +1,90 @@
+
+> peizhe-server@0.1.0 test:merge24
+> node --test scripts/test-merge24-moderation.test.js scripts/test-message-links.test.js scripts/test-merge24-frontend.test.js && node scripts/test-merge24-social.test.js && node scripts/test-merge24-mute.test.js
+
+✔ private chat shows sender care before returning on code 0 (1.958ms)
+✔ group chat shows sender care before returning on code 0 (0.8081ms)
+✔ private chat shows sender care before returning on code 403 (0.5338ms)
+✔ group chat shows sender care before returning on code 403 (1.1472ms)
+✔ unfollowed message senders remain reachable and untrusted names stay text (1.2881ms)
+✔ conversation API failure produces visible error instead of an empty result (0.5703ms)
+✔ blocked shared-diary messages cannot regain a navigation card through the wrapper (0.7529ms)
+  💚 群 interest 检测到危机信号，机器人已发关怀提示
+  🤖 群 interest 拦截消息 [诈骗] user=71 第1次
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+✔ expanded abusive language detects spacing and zero-width obfuscation (1.9636ms)
+✔ normal health, debt and security discussions are not punished (0.582ms)
+✔ explicit recruitment and credential solicitation remain blocked (0.1545ms)
+✔ new crisis phrases including split characters are independently detected (0.1346ms)
+✔ privacy number mask covers every occurrence and emoji uses codepoints (0.4326ms)
+✔ muted ordinary group messages remain rejected (1.0017ms)
+✔ muted pure crisis reaches group support (1.9088ms)
+✔ muted mixed crisis returns care without broadcasting prohibited text (0.2979ms)
+✔ DM frequency still rejects ordinary bursts (0.3886ms)
+✔ DM pure crisis bypasses frequency but receives private care (0.3874ms)
+✔ DM mixed crisis bypasses frequency only for feedback, never delivery (0.3182ms)
+✔ private bot escalation never claims mute or hypothetical future sanctions (0.4484ms)
+✔ normal DM relies on conversation unread without duplicate notification writes (0.3252ms)
+✔ blocked private text is absent from runtime logs (0.2098ms)
+✔ only the two supported local notification destinations become links (1.2797ms)
+✔ untrusted navigation remains plain text (0.1666ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 203.8367
+[提示] GET /api/interact/friend-stats -> 401 还没登录，请先登录
+[提示] GET /api/report/mine -> 401 还没登录，请先登录
+PASS new social endpoints require authentication
+PASS mutual-only totals and fan fields match actual relations
+PASS favorite count comes from real favorite rows
+[提示] POST /api/report -> 404 内容不存在或不可见
+[提示] POST /api/report -> 404 内容不存在或不可见
+[提示] POST /api/report -> 404 内容不存在或不可见
+PASS private diary and comment cannot be reported to reveal content
+[提示] POST /api/report -> 409 你已经举报过了，我们会尽快处理
+PASS report details are visible only while the target remains visible
+PASS automated DMs preserve sender unread and increment recipient atomically
+PASS automated DMs respect blocks and private source visibility
+PASS failure between message insert and unread update rolls back the transaction
+PASS friend greeting requires mutual follows and preserves existing unread
+[提示] POST /api/report -> 400 这是你自己发的消息
+[提示] POST /api/report -> 404 内容不存在或不可见
+[提示] POST /api/report -> 404 内容不存在或不可见
+[提示] POST /api/report -> 404 内容不存在或不可见
+PASS message reports accept only received normal non-system messages
+PASS mentions use a DM with a diary link and no duplicate mention notification
+  ✿ social1c9bb60 → social1c9bb62：愿你今天有个好心情
+PASS blessings produce a DM link without duplicate interaction notification
+互动私信提示未送达，原操作已保存。
+  ✿ social1c9bb60 → social1c9bb61：希望你今晚好好休息
+互动私信提示未送达，原操作已保存。
+PASS a failed optional DM does not discard saved comments or blessings
+MERGE24 SOCIAL: 13 groups passed.
+  🤖 群 muteteste910738c 拦截消息 [诈骗] user=122 第1次
+  🤖 群 muteteste910738c 拦截消息 [诈骗] user=122 第2次 禁言30秒
+[提示] POST /api/group/rooms/muteteste910738c/messages -> 429 你正在被禁言，还有 299 秒。先缓一下吧。
+  💚 群 muteteste910738c 检测到危机信号，机器人已发关怀提示
+PASS existing long mute preserves deadline and permits crisis support
+  🤖 群 muteteste910738c 拦截消息 [诈骗] user=122 第1次
+  🤖 群 muteteste910738c 拦截消息 [诈骗] user=122 第2次 禁言30秒
+[提示] POST /api/group/rooms/muteteste910738c/messages -> 429 你正在被禁言，还有 29 秒。先缓一下吧。
+  💚 群 muteteste910738c 检测到危机信号，机器人已发关怀提示
+PASS no prior mute preserves deadline and permits crisis support
+  🤖 群 muteteste910738c 拦截消息 [诈骗] user=122 第1次
+  🤖 群 muteteste910738c 拦截消息 [诈骗] user=122 第2次 禁言30秒
+[提示] POST /api/group/rooms/muteteste910738c/messages -> 429 你正在被禁言，还有 29 秒。先缓一下吧。
+  💚 群 muteteste910738c 检测到危机信号，机器人已发关怀提示
+PASS expired mute preserves deadline and permits crisis support
+MERGE24 MUTE: 3 groups passed.
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice

@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-11-13T19:27:04.3179850+08:00",
+  "sourceHashBefore": "D919B8385E8E13A36B2F0CCA85CCE2597595CBD71C76DE6DD10A7BAD7E726993",
+  "sourceHashAfter": "D919B8385E8E13A36B2F0CCA85CCE2597595CBD71C76DE6DD10A7BAD7E726993",
+  "sourceUnchanged": true,
+  "competitionExit": 0,
+  "merge24Exit": 0,
+  "A_defectAssertionsExit": 0,
+  "B_defectAssertionsExit": 0,
+  "B_mixedExtraChecksExit": 0,
+  "servedSourceMatches": true,
+  "databaseConnected": true,
+  "modelConfigured": false
+}

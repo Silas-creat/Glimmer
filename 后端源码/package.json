@@ -11,7 +11,7 @@
     "initdb": "node scripts/init-db.js",
     "check": "node scripts/smoke-test.js",
     "test": "node scripts/smoke-test.js",
-    "test:competition": "node --test scripts/test-ai-session.test.js scripts/test-chat-session.test.js scripts/test-crisis-policy.test.js && node scripts/test-companion.test.js && node scripts/test-moderation.js && node scripts/test-chatbot.js",
+    "test:competition": "node --test scripts/test-ai-session.test.js scripts/test-chat-session.test.js scripts/test-chat-companion.test.js scripts/test-chat-companion-repair.test.js scripts/test-crisis-policy.test.js && node scripts/test-companion.test.js && node scripts/test-moderation.js && node scripts/test-chatbot.js",
     "test:merge24": "node --test scripts/test-merge24-moderation.test.js scripts/test-message-links.test.js scripts/test-merge24-frontend.test.js && node scripts/test-merge24-social.test.js && node scripts/test-merge24-mute.test.js"
   },
   "engines": {

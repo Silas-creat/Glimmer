@@ -1,0 +1,1384 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../前端参考') + path.sep;
+const require = createRequire(import.meta.url);
+const companion = require('../../前端参考/chat-companion.js');
+
+class El {
+  constructor(tag = 'div') {
+    this.tag = tag;
+    this.children = [];
+    this.events = {};
+    this.attrs = {};
+    this.hidden = false;
+    this.disabled = false;
+    this.checked = false;
+    this.value = '';
+    this.text = '';
+    this.href = '';
+    this.type = '';
+    this.onclick = null;
+    this.scrollTop = 0;
+    this.scrollHeight = 0;
+  }
+  set textContent(value) { this.text = String(value); this.children = []; }
+  get textContent() { return (this.text || '') + this.children.map(child => child.textContent).join(''); }
+  appendChild(child) { this.children.push(child); child.parent = this; return child; }
+  replaceChildren(...children) { this.text = ''; this.children = children; children.forEach(child => { child.parent = this; }); }
+  remove() { if (this.parent) this.parent.children = this.parent.children.filter(child => child !== this); }
+  focus() {}
+  setAttribute(key, value) { this.attrs[key] = String(value); }
+  getAttribute(key) { return this.attrs[key]; }
+  addEventListener(type, handler) { (this.events[type] ||= []).push(handler); }
+  closest() { return this; }
+  querySelectorAll() { return []; }
+  emit(type, event = {}) { return Promise.all((this.events[type] || []).map(handler => handler(event))); }
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function flush() {
+  for (let i = 0; i < 10; i += 1) await Promise.resolve();
+}
+
+function setup(request, options = {}) {
+  const ids = [
+    'chat', 'input', 'send', 'model-status', 'care', 'cc-mode-note',
+    'cc-save-toggle', 'cc-save-state', 'cc-save-hint', 'cc-tools',
+    'cc-panel', 'cc-panel-title', 'cc-panel-body', 'cc-panel-close',
+  ];
+  const nodes = Object.fromEntries(ids.map(id => [id, new El()]));
+  nodes['cc-panel'].hidden = true;
+
+  const storage = new Map(options.saved ? [['wg_ai_save_mode_A', 'on']] : []);
+  let user = options.user || { uid: 'A' };
+  let token = options.token === undefined ? 'token-A' : options.token;
+  const storageListeners = [];
+  const calls = [];
+
+  const ctx = vm.createContext({
+    console,
+    document: {
+      createElement: tag => new El(tag),
+      getElementById: id => nodes[id],
+      activeElement: null,
+      addEventListener() {},
+    },
+    localStorage: {
+      getItem: key => (storage.has(key) ? storage.get(key) : null),
+      setItem: (key, value) => storage.set(key, String(value)),
+    },
+    getToken: () => token,
+    getUser: () => user,
+    setUser: next => { user = next; },
+    addEventListener: (type, handler) => { if (type === 'storage') storageListeners.push(handler); },
+  });
+
+  for (const file of ['chat-session.js', 'chat-companion.js']) {
+    vm.runInContext(fs.readFileSync(ROOT + file, 'utf8'), ctx, { filename: file });
+  }
+
+  const api = async (url, optionsArg = {}) => {
+    calls.push({ url, method: optionsArg.method || 'GET', body: optionsArg.body });
+    if (url === '/ai/status') return { code: 0, data: { isReal: false } };
+    return request(url, optionsArg);
+  };
+  const ui = ctx.ChatCompanion.mountChatCompanion({ api });
+
+  const action = async name => {
+    const target = new El();
+    target.setAttribute('data-cc-action', name);
+    await nodes['cc-tools'].emit('click', { target });
+  };
+  const buttons = () => {
+    const all = [];
+    const visit = node => {
+      if (node.tag === 'button') all.push(node);
+      node.children.forEach(visit);
+    };
+    visit(nodes['cc-panel-body']);
+    return all;
+  };
+  const findButton = text => buttons().find(node => node.textContent === text);
+  const setAccount = (nextUser, nextToken) => { user = nextUser; token = nextToken; };
+  const emitStorage = key => storageListeners.forEach(handler => handler({ key }));
+
+  return { ctx, nodes, ui, storage, calls, action, buttons, findButton, setAccount, emitStorage };
+}
+
+const chatSuccess = content => ({ code: 0, data: { reply: { content }, saved: true, provider: { isReal: false } } });
+const historyEmpty = { code: 0, data: { list: [], hasMore: false } };
+
+test('P1-01 closing save during /auth/me keeps the user choice temporary', async () => {
+  const verify = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return verify.promise;
+    if (url === '/ai/messages') return historyEmpty;
+    return { code: 0, data: {} };
+  });
+
+  s.nodes['cc-save-toggle'].checked = true;
+  const enabling = s.nodes['cc-save-toggle'].emit('change');
+  s.nodes['cc-save-toggle'].checked = false;
+  await s.nodes['cc-save-toggle'].emit('change');
+  assert.equal(s.ui.state.mode, 'temporary');
+  assert.notEqual(s.storage.get('wg_ai_save_mode_A'), 'on');
+
+  verify.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await enabling;
+  await flush();
+  assert.equal(s.ui.state.mode, 'temporary');
+  assert.equal(s.nodes['cc-save-toggle'].checked, false);
+  assert.equal(s.calls.some(call => call.url === '/ai/messages'), false);
+});
+
+test('P1-02 initial preference restore loses to a later explicit close', async () => {
+  const verify = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return verify.promise;
+    if (url === '/ai/messages') return historyEmpty;
+    return { code: 0, data: {} };
+  }, { saved: true });
+
+  s.nodes['cc-save-toggle'].checked = false;
+  await s.nodes['cc-save-toggle'].emit('change');
+  verify.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await flush();
+  assert.equal(s.ui.state.mode, 'temporary');
+  assert.notEqual(s.storage.get('wg_ai_save_mode_A'), 'on');
+});
+
+test('P1-03 a late auth response for another account does not grant save', async () => {
+  const verify = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return verify.promise;
+    return { code: 0, data: {} };
+  });
+
+  s.nodes['cc-save-toggle'].checked = true;
+  const enabling = s.nodes['cc-save-toggle'].emit('change');
+  s.setAccount({ uid: 'B' }, 'token-B');
+  verify.resolve({ code: 0, data: { user: { uid: 'B' } } });
+  await enabling;
+  await flush();
+  assert.equal(s.ui.state.mode, 'temporary');
+  assert.equal(s.ui.state.uid, 'B');
+  assert.notEqual(s.storage.get('wg_ai_save_mode_B'), 'on');
+});
+
+test('P1-04 a reply arriving after clear never re-enters the next temporary request', async () => {
+  const reply = deferred();
+  const bodies = [];
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/chat') {
+      bodies.push(optionsArg.body);
+      return bodies.length === 1 ? reply.promise : chatSuccess('new reply');
+    }
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return { code: 0, data: { deleted: 2 } };
+    return { code: 0, data: {} };
+  });
+
+  s.nodes.input.value = 'before clear';
+  const sending = s.nodes['send'].emit('click');
+  await flush();
+  await s.action('clear');
+  await s.findButton('确认清除').onclick();
+  assert.equal(s.ui.state.turns.length, 0);
+
+  reply.resolve(chatSuccess('late old reply'));
+  await sending;
+  await flush();
+  s.nodes.input.value = 'after clear';
+  await s.nodes['send'].emit('click');
+  assert.equal(bodies[1].history.length, 0);
+  assert.equal(bodies[1].remember, false);
+});
+
+test('P1-05 a failed clear keeps the visible turns and context', async () => {
+  const bodies = [];
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/chat') {
+      bodies.push(optionsArg.body);
+      return chatSuccess('reply');
+    }
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return { code: 50000, msg: '清除失败' };
+    return { code: 0, data: {} };
+  });
+
+  s.nodes.input.value = 'keep me';
+  await s.nodes['send'].emit('click');
+  assert.equal(s.ui.state.turns.length, 2);
+  await s.action('clear');
+  await s.findButton('确认清除').onclick();
+  assert.equal(s.ui.state.turns.length, 2);
+  assert.match(s.nodes.chat.textContent, /keep me/);
+  s.nodes.input.value = 'next';
+  await s.nodes['send'].emit('click');
+  assert.equal(bodies[1].history.length, 2);
+});
+
+test('P1-06 clear then immediate send is not blocked by the old pending request', async () => {
+  const reply = deferred();
+  const bodies = [];
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/chat') {
+      bodies.push(optionsArg.body);
+      return bodies.length === 1 ? reply.promise : chatSuccess('fresh');
+    }
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return { code: 0, data: { deleted: 1 } };
+    return { code: 0, data: {} };
+  });
+
+  s.nodes.input.value = 'old';
+  const oldSend = s.nodes['send'].emit('click');
+  await flush();
+  await s.action('clear');
+  await s.findButton('确认清除').onclick();
+  s.nodes.input.value = 'fresh';
+  await s.nodes['send'].emit('click');
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[1].history.length, 0);
+  reply.resolve(chatSuccess('old reply'));
+  await oldSend;
+});
+
+test('P1-07 account switch clears A data and sends B as temporary', async () => {
+  const s = setup(url => {
+    if (url === '/auth/me') return { code: 0, data: { user: { uid: 'A' } } };
+    if (url === '/ai/messages') return historyEmpty;
+    return chatSuccess('ok');
+  }, { saved: true });
+  await flush();
+  assert.equal(s.ui.state.mode, 'saved');
+
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.nodes.input.value = 'B message';
+  await s.nodes['send'].emit('click');
+  assert.equal(s.ui.state.mode, 'temporary');
+  assert.equal(s.ui.state.uid, 'B');
+  assert.doesNotMatch(s.nodes.chat.textContent, /今天想从哪件小事说起/);
+  assert.equal(s.calls.some(call => call.url === '/ai/chat'), false);
+
+  await s.nodes['send'].emit('click');
+  const chatCall = s.calls.find(call => call.url === '/ai/chat');
+  assert.equal(chatCall.body.remember, false);
+  assert.notEqual(s.storage.get('wg_ai_save_mode_B'), 'on');
+});
+
+test('P1-08 an old saved reply cannot repopulate after account switch', async () => {
+  const reply = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return { code: 0, data: { user: { uid: 'A' } } };
+    if (url === '/ai/messages') return historyEmpty;
+    if (url === '/ai/chat') return reply.promise;
+    return { code: 0, data: {} };
+  }, { saved: true });
+  await flush();
+
+  s.nodes.input.value = 'A private message';
+  const sending = s.nodes['send'].emit('click');
+  await flush();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  reply.resolve(chatSuccess('A old private reply'));
+  await sending;
+  await flush();
+  assert.doesNotMatch(s.nodes.chat.textContent, /A old private reply/);
+  assert.equal(s.ui.state.turns.length, 0);
+  assert.equal(s.ui.state.mode, 'temporary');
+});
+
+test('P2-01 an old memory response cannot overwrite a successful clear', async () => {
+  const memory = deferred();
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return { code: 0, data: { deleted: 2 } };
+    if (url === '/ai/memory') return memory.promise;
+    return { code: 0, data: {} };
+  });
+
+  await s.action('memory');
+  await s.action('clear');
+  await s.findButton('确认清除').onclick();
+  assert.match(s.nodes['cc-panel-body'].textContent, /已清除 2/);
+  memory.resolve({ code: 0, data: { hasMemory: true, summary: 'old sensitive summary', totalMessages: 2, pendingMessages: 0 } });
+  await flush();
+  assert.match(s.nodes['cc-panel-body'].textContent, /已清除 2/);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /old sensitive summary/);
+});
+
+test('P2-02 closing the panel discards a pending memory response', async () => {
+  const memory = deferred();
+  const s = setup(url => (url === '/ai/memory' ? memory.promise : { code: 0, data: {} }));
+  await s.action('memory');
+  s.ui.closePanel();
+  memory.resolve({ code: 0, data: { hasMemory: true, summary: 'must not appear' } });
+  await flush();
+  assert.equal(s.nodes['cc-panel-body'].textContent, '');
+});
+
+test('B2 prepare responses cannot replace a newer draft', async () => {
+  const first = deferred();
+  const second = deferred();
+  const s = setup(url => {
+    if (url === '/companion/prepare') return s.calls.filter(call => call.url === '/companion/prepare').length === 1 ? first.promise : second.promise;
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  const statusA = new El('p');
+  const statusB = new El('p');
+  const requestA = s.ui.prepareDraft(new El('button'), { value: '2026-11-12' }, { checked: false }, statusA);
+  const requestB = s.ui.prepareDraft(new El('button'), { value: '2026-11-13' }, { checked: false }, statusB);
+  second.resolve({ code: 0, data: { draft: { id: 'newer', date: '2026-11-13', text: 'newer', status: 'pending', sources: [] }, trace: [] } });
+  await requestB;
+  assert.equal(s.ui.state.draft.id, 'newer');
+  first.resolve({ code: 0, data: { draft: { id: 'older', date: '2026-11-12', text: 'older', status: 'pending', sources: [] }, trace: [] } });
+  await requestA;
+  assert.equal(s.ui.state.draft.id, 'newer');
+  assert.match(s.nodes['cc-panel-body'].textContent, /2026-11-13/);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /2026-11-12/);
+});
+
+test('B3 cancel is terminal and cannot submit a confirmation', async () => {
+  let confirmPosts = 0;
+  const s = setup((url, optionsArg) => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'cancel-me', date: '2026-11-12', text: 'draft', status: 'pending', sources: [] }, trace: [] } };
+    }
+    if (url.endsWith('/confirm')) { confirmPosts += 1; return { code: 40900, msg: '草稿已取消' }; }
+    if (url.startsWith('/companion/drafts/') && optionsArg.method === 'DELETE') {
+      return { code: 0, data: { draft: { id: 'cancel-me', status: 'cancelled' } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.ui.prepareDraft(new El('button'), { value: '2026-11-12' }, { checked: false }, new El('p'));
+
+  const status = new El('p');
+  const confirmButton = s.findButton('确认保存为私密日记');
+  const cancelButton = s.findButton('取消草稿');
+  await s.ui.cancelDraft(cancelButton, status);
+  assert.equal(s.ui.state.draftStatus, 'cancelled');
+  assert.equal(confirmButton.disabled, true);
+  await s.ui.confirmDraft(confirmButton, status, { value: 'draft' });
+  assert.equal(confirmPosts, 0);
+  assert.match(status.textContent, /已取消/);
+  assert.doesNotMatch(status.textContent, /已有日记/);
+});
+
+test('B1 confirmation timeout retries the same draft id and renders real data', async () => {
+  let posts = 0;
+  const s = setup((url, optionsArg) => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'retry-me', date: '2026-11-13', text: 'body', status: 'pending', sources: [] }, trace: [] } };
+    }
+    if (url.endsWith('/confirm')) {
+      posts += 1;
+      return posts === 1
+        ? { code: -1 }
+        : { code: 0, data: { diaryId: 42, date: '2026-11-13', url: 'diary-write.html?date=2026-11-13', status: 'confirmed', isPublic: false, care: null } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.ui.prepareDraft(new El('button'), { value: '2026-11-13' }, { checked: false }, new El('p'));
+
+  const confirmButton = s.findButton('确认保存为私密日记');
+  await s.ui.confirmDraft(confirmButton, new El('p'), { value: 'body' });
+  assert.equal(posts, 2);
+  assert.match(s.nodes['cc-panel-body'].textContent, /42/);
+  const link = s.nodes['cc-panel-body'].children.find(node => node.tag === 'a' && node.href === 'diary-write.html?date=2026-11-13');
+  assert.ok(link);
+  assert.equal(s.calls.some(call => call.url === '/companion/prepare' && call.method === 'POST'), true);
+});
+
+test('B4 crisis care is rendered inside the open panel with tel links', async () => {
+  let confirmPosts = 0;
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: null, care: { message: '请先联系可信任的人。', lines: [{ name: '心理援助热线', phone: '123-456' }] } } };
+    }
+    if (url.endsWith('/confirm')) { confirmPosts += 1; return { code: 0, data: {} }; }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'crisis material' }];
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.ui.prepareDraft(new El('button'), { value: '2026-11-13' }, { checked: false }, new El('p'));
+
+  const panelText = s.nodes['cc-panel-body'].textContent;
+  assert.match(panelText, /请先联系可信任的人/);
+  assert.match(panelText, /心理援助热线/);
+  assert.match(panelText, /123-456/);
+  const tel = s.nodes['cc-panel-body'].children.some(node => node.tag === 'div' && node.children.some(child => child.href === 'tel:123-456'));
+  assert.equal(tel, true);
+  assert.equal(confirmPosts, 0);
+  assert.equal(s.buttons().some(node => node.textContent.includes('确认保存')), false);
+});
+test('B3 error mapping separates cancellation, conflict, expiry and deleted diary', () => {
+  const cancelled = companion.mapDraftError({ code: 40900, msg: '草稿已取消' });
+  assert.equal(cancelled.cancelled, true);
+  assert.equal(cancelled.conflict, undefined);
+  assert.match(cancelled.message, /已取消/);
+  const conflict = companion.mapDraftError({ code: 40900, msg: '这一天已有日记' });
+  assert.equal(conflict.conflict, true);
+  assert.match(conflict.message, /不会覆盖/);
+  const expired = companion.mapDraftError({ code: 41000, msg: '草稿已过期' });
+  assert.equal(expired.expired, true);
+  const deleted = companion.mapDraftError({ code: 41000, msg: '已保存的日记不存在' });
+  assert.equal(deleted.deleted, true);
+  assert.match(deleted.message, /已被删除/);
+});
+
+test('P2-03 a failed clear keeps the server summary and explains the failure', async () => {
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return { code: 50000, msg: '清除失败' };
+    if (url === '/ai/memory') return { code: 0, data: { hasMemory: true, summary: 'kept summary', totalMessages: 2, pendingMessages: 0 } };
+    return { code: 0, data: {} };
+  });
+  await s.action('memory');
+  assert.match(s.nodes['cc-panel-body'].textContent, /kept summary/);
+  await s.action('clear');
+  await s.findButton('确认清除').onclick();
+  assert.match(s.nodes['cc-panel-body'].textContent, /清除失败/);
+  assert.match(s.nodes['cc-panel-body'].textContent, /摘要仍然保留/);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /已清除 0/);
+});
+
+test('normal confirm still posts once and renders the real diary result', async () => {
+  let posts = 0;
+  const s = setup((url, optionsArg) => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'normal', date: '2026-11-13', text: 'body', status: 'pending', sources: [] }, trace: [] } };
+    }
+    if (url.endsWith('/confirm')) {
+      posts += 1;
+      return { code: 0, data: { diaryId: 7, date: '2026-11-13', url: 'diary-write.html?date=2026-11-13', status: 'confirmed', isPublic: false, care: null } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.ui.prepareDraft(new El('button'), { value: '2026-11-13' }, { checked: false }, new El('p'));
+  await s.ui.confirmDraft(s.findButton('确认保存为私密日记'), new El('p'), { value: 'body' });
+  assert.equal(posts, 1);
+  assert.match(s.nodes['cc-panel-body'].textContent, /7/);
+});
+test('EDGE-R1-01 draft material is bound to the selecting account before prepare', async () => {
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'a-draft', date: '2026-11-13', text: 'A private draft text', status: 'pending', sources: [] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A private material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  s.setAccount({ uid: 'B' }, 'token-B');
+  await s.findButton('生成草稿').onclick();
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url === '/companion/prepare').length, 0);
+  assert.equal(s.ui.state.uid, 'B');
+  assert.doesNotMatch(s.nodes.chat.textContent, /A private material/);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /A private material/);
+  assert.match(s.nodes['cc-save-state'].textContent, /账号或登录状态已变化/);
+});
+
+test('EDGE-R1-02 same-account token refresh still prepares exactly once', async () => {
+  const s = setup(url => {
+    if (url === '/auth/me') return { code: 0, data: { user: { uid: 'A' } } };
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'refresh-draft', date: '2026-11-13', text: 'refreshed', status: 'pending', sources: [] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  await s.findButton('生成草稿').onclick();
+  await flush();
+
+  const prepares = s.calls.filter(call => call.url === '/companion/prepare');
+  assert.equal(prepares.length, 1);
+  assert.equal(prepares[0].body.message, 'A material');
+});
+
+test('EDGE-R1-03 confirm does not submit A draft after credentials switch to B without storage', async () => {
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'bound-draft', date: '2026-11-13', text: 'body', status: 'pending', sources: [] } } };
+    }
+    if (url.endsWith('/confirm')) {
+      return { code: 0, data: { diaryId: 9, date: '2026-11-13', url: 'diary-write.html?date=2026-11-13', isPublic: false, care: null } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  await flush();
+
+  s.setAccount({ uid: 'B' }, 'token-B');
+  await s.findButton('确认保存为私密日记').onclick();
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url.endsWith('/confirm')).length, 0);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /已保存为私密日记/);
+  assert.match(s.nodes['cc-save-state'].textContent, /账号或登录状态已变化/);
+});
+
+test('EDGE-R1-04 a late prepare response cannot land after credentials switch to B', async () => {
+  const prepare = deferred();
+  const s = setup(url => {
+    if (url === '/companion/prepare') return prepare.promise;
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  const pending = s.findButton('生成草稿').onclick();
+  await flush();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  prepare.resolve({ code: 0, data: { draft: { id: 'late', date: '2026-11-13', text: 'A late draft body', status: 'pending', sources: [] } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.ui.state.draft, null);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /A late draft body|尚未保存为日记/);
+});
+
+test('EDGE-R2-01 memory opened during pending clear cannot restore the cleared summary', async () => {
+  const deletion = deferred();
+  const memory = deferred();
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return deletion.promise;
+    if (url === '/ai/memory') return memory.promise;
+    return { code: 0, data: {} };
+  });
+  await s.action('clear');
+  const clearing = s.findButton('确认清除').onclick();
+  s.ui.closePanel();
+  await s.action('memory');
+  deletion.resolve({ code: 0, data: { deleted: 2 } });
+  await clearing;
+  memory.resolve({ code: 0, data: { hasMemory: true, summary: 'old cleared summary', totalMessages: 2, pendingMessages: 0 } });
+  await flush();
+
+  assert.equal(s.ui.state.memorySnapshot, null);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /old cleared summary/);
+  assert.match(s.nodes['cc-panel-body'].textContent, /还没有聊天记录。/);
+});
+
+test('EDGE-R2-02 a successful clear invalidates an already rendered old summary', async () => {
+  const deletion = deferred();
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return deletion.promise;
+    if (url === '/ai/memory') return { code: 0, data: { hasMemory: true, summary: 'pre-clear summary', totalMessages: 2, pendingMessages: 0 } };
+    return { code: 0, data: {} };
+  });
+  await s.action('clear');
+  const clearing = s.findButton('确认清除').onclick();
+  s.ui.closePanel();
+  await s.action('memory');
+  await flush();
+  assert.match(s.nodes['cc-panel-body'].textContent, /pre-clear summary/);
+
+  deletion.resolve({ code: 0, data: { deleted: 2 } });
+  await clearing;
+  await flush();
+
+  assert.equal(s.ui.state.memorySnapshot, null);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /pre-clear summary/);
+  assert.equal(s.ui.state.historyPage, 1);
+  assert.equal(s.ui.state.historyHasMore, false);
+});
+
+test('EDGE-R2-03 a successful clear leaves an open draft editor untouched', async () => {
+  const deletion = deferred();
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return deletion.promise;
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'draft-open', date: '2026-11-13', text: 'edited body', status: 'pending', sources: [] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('clear');
+  const clearing = s.findButton('确认清除').onclick();
+  s.ui.closePanel();
+
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  const textarea = s.nodes['cc-panel-body'].children.find(node => node.tag === 'textarea');
+  textarea.value = 'edited body';
+
+  deletion.resolve({ code: 0, data: { deleted: 2 } });
+  await clearing;
+  await flush();
+
+  assert.equal(textarea.value, 'edited body');
+
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /已清除 2/);
+  assert.equal(s.nodes['cc-panel'].hidden, false);
+});
+
+test('EDGE-R3-01 a late clear success for A cannot wipe B page or announce B cleared', async () => {
+  const deletion = deferred();
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return deletion.promise;
+    if (url === '/ai/chat') return chatSuccess('B fresh reply');
+    return { code: 0, data: {} };
+  });
+  await s.action('clear');
+  const clearing = s.findButton('确认清除').onclick();
+
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  s.nodes.input.value = 'B new conversation';
+  await s.nodes['send'].emit('click');
+  await flush();
+  assert.match(s.nodes.chat.textContent, /B new conversation/);
+  assert.equal(s.ui.state.uid, 'B');
+  const turnsBefore = s.ui.state.turns.length;
+
+  deletion.resolve({ code: 0, data: { deleted: 2 } });
+  await clearing;
+  await flush();
+
+  assert.equal(s.ui.state.uid, 'B');
+  assert.equal(s.ui.state.turns.length, turnsBefore);
+  assert.match(s.nodes.chat.textContent, /B fresh reply/);
+  assert.doesNotMatch(s.nodes['cc-save-state'].textContent, /已清除本人/);
+});
+
+test('EDGE-R3-02 closing the clear panel still clears the same account context', async () => {
+  const deletion = deferred();
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return deletion.promise;
+    if (url === '/ai/memory') return { code: 0, data: { hasMemory: true, summary: 'own summary', totalMessages: 1 } };
+    if (url === '/ai/chat') return chatSuccess('reply');
+    return { code: 0, data: {} };
+  });
+  s.nodes.input.value = 'own context';
+  await s.nodes['send'].emit('click');
+  await flush();
+  await s.action('memory');
+  await flush();
+  assert.ok(s.ui.state.memorySnapshot);
+
+  await s.action('clear');
+  const clearing = s.findButton('确认清除').onclick();
+  s.ui.closePanel();
+  deletion.resolve({ code: 0, data: { deleted: 1 } });
+  await clearing;
+  await flush();
+
+  assert.equal(s.ui.state.turns.length, 0);
+  assert.equal(s.ui.state.memorySnapshot, null);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /已清除 1/);
+});
+
+test('EDGE-R3-03 a late clear failure for A cannot show on B page', async () => {
+  const deletion = deferred();
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return deletion.promise;
+    if (url === '/ai/chat') return chatSuccess('B reply');
+    return { code: 0, data: {} };
+  });
+  await s.action('clear');
+  const clearing = s.findButton('确认清除').onclick();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  s.nodes.input.value = 'B message';
+  await s.nodes['send'].emit('click');
+  await flush();
+
+  deletion.resolve({ code: 50000, msg: 'A 清除失败' });
+  await clearing;
+  await flush();
+
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /A 清除失败/);
+  assert.match(s.nodes.chat.textContent, /B message/);
+  assert.match(s.nodes.chat.textContent, /B reply/);
+});
+
+test('EDGE-R4-01 an obsolete send cannot unlock a newer pending send', async () => {
+  const oldSend = deferred();
+  const newSend = deferred();
+  let chatCount = 0;
+  const s = setup((url, optionsArg) => {
+    if (url === '/ai/chat') {
+      chatCount += 1;
+      return chatCount === 1 ? oldSend.promise : newSend.promise;
+    }
+    if (url === '/ai/memory' && optionsArg.method === 'DELETE') return { code: 0, data: { deleted: 0 } };
+    return { code: 0, data: {} };
+  });
+  s.nodes.input.value = 'old';
+  const oldPending = s.nodes['send'].emit('click');
+  await flush();
+
+  await s.action('clear');
+  await s.findButton('确认清除').onclick();
+
+  s.nodes.input.value = 'new pending';
+  const newPending = s.nodes['send'].emit('click');
+  await flush();
+  assert.equal(s.ui.state.sending, true);
+  const turnsBefore = s.ui.state.turns.length;
+
+  oldSend.resolve(chatSuccess('old reply'));
+  await oldPending;
+  await flush();
+
+  assert.equal(s.ui.state.sending, true);
+  assert.equal(s.nodes['send'].disabled, true);
+  assert.equal(s.ui.state.turns.length, turnsBefore);
+
+  s.nodes.input.value = 'third message';
+  const third = s.nodes['send'].emit('click');
+  await flush();
+  assert.equal(chatCount, 2);
+  assert.equal(s.ui.state.turns.length, turnsBefore);
+
+  newSend.resolve(chatSuccess('new reply'));
+  await newPending;
+  await third;
+});
+
+test('EDGE-R4-02 double click during identity verification sends only once', async () => {
+  const me = deferred();
+  let chatCount = 0;
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/ai/chat') { chatCount += 1; return chatSuccess('reply'); }
+    return { code: 0, data: {} };
+  });
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  s.nodes.input.value = 'double click';
+  const first = s.nodes['send'].emit('click');
+  const second = s.nodes['send'].emit('click');
+  await flush();
+  me.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await Promise.all([first, second]);
+  await flush();
+
+  assert.equal(chatCount, 1);
+  assert.equal(s.ui.state.turns.filter(turn => turn.role === 'user').length, 1);
+});
+
+test('EDGE-R4-03 a late send failure for A cannot overwrite B input or notice', async () => {
+  const reply = deferred();
+  const s = setup(url => {
+    if (url === '/ai/chat') return reply.promise;
+    return { code: 0, data: {} };
+  });
+  s.nodes.input.value = 'A message';
+  const sending = s.nodes['send'].emit('click');
+  await flush();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  s.nodes.input.value = 'B draft';
+  reply.resolve({ code: 50000, msg: 'A failed' });
+  await sending;
+  await flush();
+
+  assert.equal(s.nodes.input.value, 'B draft');
+  assert.doesNotMatch(s.nodes.chat.textContent, /A failed/);
+});
+
+test('EDGE-R5-01 confirm success shows full care inside the open dialog', async () => {
+  const care = { message: 'synthetic crisis support', lines: [{ name: 'help line', phone: '12356' }] };
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'care-draft', date: '2026-11-13', text: 'body', status: 'pending', sources: [] } } };
+    }
+    if (url.endsWith('/confirm')) {
+      return { code: 0, data: { diaryId: 10, date: '2026-11-13', url: 'diary-write.html?date=2026-11-13', isPublic: false, care } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  await s.findButton('确认保存为私密日记').onclick();
+  await flush();
+
+  const panelText = s.nodes['cc-panel-body'].textContent;
+  assert.match(panelText, /synthetic crisis support/);
+  assert.match(panelText, /help line/);
+  assert.match(panelText, /12356/);
+  assert.equal(panelText.match(/synthetic crisis support/g).length, 1);
+  const tel = s.nodes['cc-panel-body'].children.some(node => node.tag === 'div' && node.children.some(child => child.href === 'tel:12356'));
+  assert.equal(tel, true);
+  assert.equal(s.calls.filter(call => call.url.endsWith('/confirm')).length, 1);
+});
+
+test('EDGE-R5-02 recovered confirm success also shows full care in the dialog', async () => {
+  const care = { message: 'recovered support', lines: [{ name: 'care line', phone: '010-8295' }] };
+  let posts = 0;
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'recover-care', date: '2026-11-13', text: 'body', status: 'pending', sources: [] } } };
+    }
+    if (url.endsWith('/confirm')) {
+      posts += 1;
+      return posts === 1
+        ? { code: -1 }
+        : { code: 0, data: { diaryId: 42, date: '2026-11-13', url: 'diary-write.html?date=2026-11-13', isPublic: false, care } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  await s.findButton('确认保存为私密日记').onclick();
+  await flush();
+
+  const panelText = s.nodes['cc-panel-body'].textContent;
+  assert.match(panelText, /recovered support/);
+  assert.match(panelText, /care line/);
+  assert.match(panelText, /42/);
+  assert.equal(s.calls.filter(call => call.url === '/companion/prepare').length, 1);
+});
+
+test('EDGE-R5-03 confirm success without care renders no care block or tel link', async () => {
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'plain', date: '2026-11-13', text: 'body', status: 'pending', sources: [] } } };
+    }
+    if (url.endsWith('/confirm')) {
+      return { code: 0, data: { diaryId: 8, date: '2026-11-13', url: 'diary-write.html?date=2026-11-13', isPublic: false, care: null } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  await s.findButton('确认保存为私密日记').onclick();
+  await flush();
+
+  const hasTel = s.nodes['cc-panel-body'].children.some(node => node.tag === 'a' && node.href.startsWith('tel:'));
+  assert.equal(hasTel, false);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /如果你现在不安全/);
+});
+
+test('EDGE-R6-01 crisis prepare stops generation with care and return entry', async () => {
+  let prepares = 0;
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      prepares += 1;
+      return { code: 0, data: { draft: null, care: { message: 'stopped support', lines: [{ name: 'help', phone: '12356' }] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'synthetic crisis' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  const prepareButton = s.findButton('生成草稿');
+  await prepareButton.onclick();
+  await flush();
+
+  assert.equal(prepares, 1);
+  assert.equal(s.findButton('生成草稿'), undefined);
+  assert.match(s.nodes['cc-panel-body'].textContent, /已停止生成/);
+  assert.match(s.nodes['cc-panel-body'].textContent, /stopped support/);
+  assert.equal(s.findButton('返回聊天') !== undefined, true);
+  assert.equal(s.findButton('关闭') !== undefined, true);
+  assert.equal(s.calls.filter(call => call.url.endsWith('/confirm')).length, 0);
+  assert.equal(s.calls.filter(call => call.method === 'DELETE').length, 0);
+});
+
+test('EDGE-R6-02 a failed prepare is retryable and is not a stopped terminal', async () => {
+  let prepares = 0;
+  const s = setup(url => {
+    if (url === '/companion/prepare') { prepares += 1; return { code: -1, msg: '网络不太好' }; }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'synthetic material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  const prepareButton = s.findButton('生成草稿');
+  await prepareButton.onclick();
+  await flush();
+
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /已停止生成/);
+  assert.equal(prepareButton.disabled, false);
+  await prepareButton.onclick();
+  assert.equal(prepares, 2);
+});
+
+test('EDGE-R6-03 stopped care does not leak into the next account page', async () => {
+  const s = setup(url => {
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: null, care: { message: 'leak support', lines: [{ name: 'help', phone: '12356' }] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'synthetic crisis' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  await flush();
+  assert.match(s.nodes['cc-panel-body'].textContent, /leak support/);
+
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  await flush();
+
+  assert.equal(s.nodes['cc-panel'].hidden, true);
+  assert.equal(s.nodes.care.hidden, true);
+  assert.doesNotMatch(s.nodes.chat.textContent, /leak support/);
+});
+test('EDGE-R7-01 a late auth response after storage-switch cannot submit A draft material', async () => {
+  const me = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'late-a', date: '2026-11-13', text: 'A late draft', status: 'pending', sources: [] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A private material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  const pending = s.findButton('生成草稿').onclick();
+  await flush();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  me.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url === '/companion/prepare').length, 0);
+  assert.equal(s.ui.state.uid, 'B');
+  assert.equal(s.ui.state.token, 'token-B');
+  assert.doesNotMatch(s.nodes.chat.textContent, /A private material/);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /A private material|A late draft/);
+  assert.match(s.nodes['cc-save-state'].textContent, /账号或登录状态已变化|操作已失效/);
+});
+
+test('EDGE-R7-02 a pending verification cannot prepare after the panel is closed', async () => {
+  const me = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'closed-a', date: '2026-11-13', text: 'closed draft', status: 'pending', sources: [] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A closed material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  const pending = s.findButton('生成草稿').onclick();
+  await flush();
+  s.ui.closePanel();
+  me.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url === '/companion/prepare').length, 0);
+  assert.equal(s.nodes['cc-panel'].hidden, true);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /closed draft|正在生成草稿/);
+});
+
+test('EDGE-R7-03 a valid same-account token refresh prepares exactly once', async () => {
+  const s = setup(url => {
+    if (url === '/auth/me') return { code: 0, data: { user: { uid: 'A' } } };
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'refresh-a', date: '2026-11-13', text: 'refreshed draft', status: 'pending', sources: [] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A refreshed material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  await s.findButton('生成草稿').onclick();
+  await flush();
+
+  const prepares = s.calls.filter(call => call.url === '/companion/prepare');
+  assert.equal(prepares.length, 1);
+  assert.equal(prepares[0].body.message, 'A refreshed material');
+  assert.equal(s.ui.state.token, 'token-A2');
+  assert.doesNotMatch(s.nodes['cc-save-state'].textContent, /账号或登录状态已变化|操作已失效/);
+});
+
+test('EDGE-R7-04 a late auth response cannot confirm A draft on B credentials', async () => {
+  const me = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'confirm-a', date: '2026-11-13', text: 'A draft body', status: 'pending', sources: [] } } };
+    }
+    if (url.endsWith('/confirm')) {
+      return { code: 0, data: { diaryId: 11, date: '2026-11-13', url: 'diary-write.html?date=2026-11-13', isPublic: false, care: null } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A confirm material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  await flush();
+  assert.equal(s.ui.state.draftStatus, 'pending');
+
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  const pending = s.findButton('确认保存为私密日记').onclick();
+  await flush();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  me.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url.endsWith('/confirm')).length, 0);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /已保存为私密日记|日记编号/);
+  assert.match(s.nodes['cc-save-state'].textContent, /账号或登录状态已变化|操作已失效/);
+});
+
+test('EDGE-R7-05 a late auth response cannot cancel A draft on B credentials', async () => {
+  const me = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'cancel-a', date: '2026-11-13', text: 'A cancel body', status: 'pending', sources: [] } } };
+    }
+    if (url.includes('/companion/drafts/') && url.endsWith('/confirm')) {
+      return { code: 0, data: {} };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A cancel material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+  await s.findButton('生成草稿').onclick();
+  await flush();
+
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  const pending = s.findButton('取消草稿').onclick();
+  await flush();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  me.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.method === 'DELETE').length, 0);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /草稿已取消/);
+  assert.match(s.nodes['cc-save-state'].textContent, /账号或登录状态已变化|操作已失效/);
+});
+
+test('EDGE-R7-06 a late auth response cannot send A text on B credentials', async () => {
+  const me = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/ai/chat') return chatSuccess('A secret reply');
+    return { code: 0, data: {} };
+  });
+  s.nodes.input.value = 'A synthetic private text';
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  const pending = s.nodes['send'].emit('click');
+  await flush();
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  me.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url === '/ai/chat').length, 0);
+  assert.doesNotMatch(s.nodes.chat.textContent, /A synthetic private text|A secret reply/);
+  assert.equal(s.nodes['send'].disabled, false);
+  assert.equal(s.ui.state.sending, false);
+});
+
+test('EDGE-R7-07 a late restore verification cannot write A history into B page', async () => {
+  const me = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/ai/messages') return { code: 0, data: { list: [{ role: 'user', content: 'A restored history' }], hasMore: false } };
+    return { code: 0, data: {} };
+  }, { saved: true });
+  await flush();
+
+  s.setAccount({ uid: 'B' }, 'token-B');
+  s.emitStorage('wg_user');
+  me.resolve({ code: 0, data: { user: { uid: 'A', nickname: 'synthetic' } } });
+  await flush();
+
+  assert.equal(s.ui.state.uid, 'B');
+  assert.doesNotMatch(s.nodes.chat.textContent, /A restored history/);
+  assert.equal(s.calls.filter(call => call.url === '/ai/messages').length, 0);
+});
+
+test('EDGE-R7-08 a verification that outlives a second token refresh cannot prepare', async () => {
+  const me = deferred();
+  const s = setup(url => {
+    if (url === '/auth/me') return me.promise;
+    if (url === '/companion/prepare') {
+      return { code: 0, data: { draft: { id: 'stale-a', date: '2026-11-13', text: 'stale draft', status: 'pending', sources: [] } } };
+    }
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A stale material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  s.setAccount({ uid: 'A' }, 'token-A2');
+  const pending = s.findButton('生成草稿').onclick();
+  await flush();
+  s.setAccount({ uid: 'A' }, 'token-A3');
+  me.resolve({ code: 0, data: { user: { uid: 'A' } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url === '/companion/prepare').length, 0);
+  assert.equal(s.ui.state.draft, null);
+  assert.equal(s.ui.state.draftMaterial === null || s.ui.state.draftMaterial.uid !== 'A', true);
+});
+
+test('EDGE-R7-09 a late prepare response cannot land after the panel is closed', async () => {
+  const prepare = deferred();
+  const s = setup(url => {
+    if (url === '/companion/prepare') return prepare.promise;
+    return { code: 0, data: {} };
+  });
+  await s.action('draft');
+  s.ui.state.turns = [{ role: 'user', content: 'A closed-late material' }];
+  s.ui.renderDraftSelection();
+  s.nodes['cc-panel-body'].querySelectorAll = () => [{ value: '0' }];
+
+  const pending = s.findButton('生成草稿').onclick();
+  await flush();
+  s.ui.closePanel();
+  prepare.resolve({ code: 0, data: { draft: { id: 'late-draft', date: '2026-11-13', text: 'late body', status: 'pending', sources: [] } } });
+  await pending;
+  await flush();
+
+  assert.equal(s.ui.state.draft, null);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /late body|尚未保存为日记/);
+});
+
+test('EDGE-R8-01 a guest can send a temporary unsaved chat without verification', async () => {
+  const s = setup(url => {
+    if (url === '/ai/chat') return chatSuccess('guest reply');
+    return { code: 0, data: {} };
+  }, { user: {}, token: '' });
+  s.nodes.input.value = 'guest synthetic message';
+  await s.nodes['send'].emit('click');
+  await flush();
+
+  const chats = s.calls.filter(call => call.url === '/ai/chat');
+  assert.equal(chats.length, 1);
+  assert.equal(chats[0].body.remember, false);
+  assert.match(s.nodes.chat.textContent, /guest reply/);
+  assert.equal(s.calls.some(call => call.url === '/auth/me'), false);
+  assert.match(s.nodes['cc-save-state'].textContent, /临时|未保存/);
+});
+
+test('EDGE-R8-02 a guest refresh clears anonymous turns and can send again', async () => {
+  const handler = url => (url === '/ai/chat' ? chatSuccess('guest reply') : { code: 0, data: {} });
+  const first = setup(handler, { user: {}, token: '' });
+  first.nodes.input.value = 'first guest message';
+  await first.nodes['send'].emit('click');
+  await flush();
+  assert.equal(first.calls.filter(call => call.url === '/ai/chat').length, 1);
+
+  const refreshed = setup(handler, { user: {}, token: '' });
+  assert.equal(refreshed.ui.state.turns.length, 0);
+  assert.match(refreshed.nodes.chat.textContent, /今天想从哪件小事说起/);
+  assert.equal(refreshed.calls.some(call => call.url === '/ai/messages'), false);
+  assert.equal(refreshed.calls.some(call => call.url === '/ai/memory'), false);
+
+  refreshed.nodes.input.value = 'second guest message';
+  await refreshed.nodes['send'].emit('click');
+  await flush();
+  const chats = refreshed.calls.filter(call => call.url === '/ai/chat');
+  assert.equal(chats.length, 1);
+  assert.equal(chats[0].body.remember, false);
+});
+
+test('EDGE-R8-03 a guest cannot enable saved mode', async () => {
+  const s = setup(url => ({ code: 0, data: {} }), { user: {}, token: '' });
+  s.nodes['cc-save-toggle'].checked = true;
+  await s.nodes['cc-save-toggle'].emit('change');
+  await flush();
+
+  assert.equal(s.ui.state.mode, 'temporary');
+  assert.equal(Array.from(s.storage.keys()).some(key => key.startsWith('wg_ai_save_mode_')), false);
+  assert.match(s.nodes['cc-save-state'].textContent, /登录后才能保存对话记忆/);
+});
+
+test('EDGE-R8-04 a guest history memory draft entry asks for login without data', async () => {
+  const s = setup(url => ({ code: 0, data: { list: [], hasMore: false, hasMemory: true, summary: 'should not load' } }), { user: {}, token: '' });
+  await s.action('history');
+  await flush();
+  await s.action('memory');
+  await flush();
+  await s.action('draft');
+  await flush();
+
+  assert.equal(s.ui.state.historyItems.length, 0);
+  assert.equal(s.ui.state.memorySnapshot, null);
+  assert.equal(s.ui.state.draft, null);
+  assert.doesNotMatch(s.nodes['cc-panel-body'].textContent, /should not load/);
+  assert.match(s.nodes['cc-panel-body'].textContent, /登录/);
+  assert.equal(s.findButton('生成草稿'), undefined);
+});
+
+test('EDGE-R8-05 token removal isolates A context before a guest send', async () => {
+  const s = setup(url => (url === '/ai/chat' ? chatSuccess('guest after logout') : { code: 0, data: {} }));
+  s.ui.state.turns = [{ role: 'user', content: 'A synthetic bubble' }];
+  s.nodes.chat.textContent = 'A synthetic bubble';
+  s.setAccount({ uid: 'A' }, '');
+  s.emitStorage('wg_token');
+  await flush();
+
+  assert.doesNotMatch(s.nodes.chat.textContent, /A synthetic bubble/);
+  assert.equal(s.ui.state.uid, '');
+  assert.equal(s.ui.state.mode, 'temporary');
+
+  s.nodes.input.value = 'guest after logout message';
+  await s.nodes['send'].emit('click');
+  await flush();
+  const chats = s.calls.filter(call => call.url === '/ai/chat');
+  assert.equal(chats.length, 1);
+  assert.equal(chats[0].body.remember, false);
+});
+
+test('EDGE-R8-06 logout clears draft and memory then allows guest send', async () => {
+  const s = setup(url => (url === '/ai/chat' ? chatSuccess('guest after exit') : { code: 0, data: {} }));
+  s.ui.state.turns = [{ role: 'user', content: 'A exiting bubble' }];
+  s.nodes.chat.textContent = 'A exiting bubble';
+  s.ui.state.draft = { id: 'draft-a', text: 'A exiting draft', status: 'pending' };
+  s.ui.state.memorySnapshot = { hasMemory: true, summary: 'A exiting summary' };
+  s.setAccount(null, '');
+  s.emitStorage('wg_user');
+  await flush();
+
+  assert.equal(s.ui.state.draft, null);
+  assert.equal(s.ui.state.memorySnapshot, null);
+  assert.doesNotMatch(s.nodes.chat.textContent, /A exiting bubble/);
+
+  s.nodes.input.value = 'guest after exit message';
+  await s.nodes['send'].emit('click');
+  await flush();
+  const chats = s.calls.filter(call => call.url === '/ai/chat');
+  assert.equal(chats.length, 1);
+  assert.equal(chats[0].body.remember, false);
+});
+
+test('EDGE-R8-07 an old signed-in reply cannot land after logout', async () => {
+  const reply = deferred();
+  const s = setup(url => (url === '/ai/chat' ? reply.promise : { code: 0, data: {} }));
+  s.nodes.input.value = 'A in-flight text';
+  const sending = s.nodes['send'].emit('click');
+  await flush();
+  s.setAccount(null, '');
+  s.emitStorage('wg_user');
+  reply.resolve(chatSuccess('A secret in-flight reply'));
+  await sending;
+  await flush();
+
+  assert.doesNotMatch(s.nodes.chat.textContent, /A secret in-flight reply/);
+  assert.equal(s.nodes.input.value, '');
+  assert.equal(s.nodes['send'].disabled, false);
+});
+
+test('EDGE-R8-08 guest-to-login does not reuse anonymous content or enable saving', async () => {
+  const s = setup(url => ({ code: 0, data: {} }), { user: {}, token: '' });
+  s.ui.state.turns = [{ role: 'user', content: 'anonymous content' }];
+  s.nodes.chat.textContent = 'anonymous content';
+  s.setAccount({ uid: 'A' }, 'token-A');
+  s.emitStorage('wg_user');
+  await flush();
+
+  assert.doesNotMatch(s.nodes.chat.textContent, /anonymous content/);
+  assert.equal(s.ui.state.mode, 'temporary');
+  assert.equal(s.storage.has('wg_ai_save_mode_A'), false);
+  assert.equal(s.calls.some(call => call.url === '/ai/chat' && call.body && call.body.remember === true), false);
+});
+
+test('EDGE-R8-09 a guest double click sends only one request', async () => {
+  const reply = deferred();
+  let chatCount = 0;
+  const s = setup(url => {
+    if (url === '/ai/chat') { chatCount += 1; return reply.promise; }
+    return { code: 0, data: {} };
+  }, { user: {}, token: '' });
+  s.nodes.input.value = 'guest double click';
+  const first = s.nodes['send'].emit('click');
+  const second = s.nodes['send'].emit('click');
+  await flush();
+
+  assert.equal(chatCount, 1);
+  assert.equal(s.ui.state.turns.filter(turn => turn.role === 'user').length, 1);
+
+  reply.resolve(chatSuccess('guest single reply'));
+  await Promise.all([first, second]);
+  await flush();
+  assert.equal(s.nodes['send'].disabled, false);
+});
+
+test('EDGE-R8-10 a failed guest send keeps the text and writes no history', async () => {
+  const s = setup(url => (url === '/ai/chat' ? { code: 50000, msg: 'guest failure' } : { code: 0, data: {} }), { user: {}, token: '' });
+  s.nodes.input.value = 'guest failing text';
+  await s.nodes['send'].emit('click');
+  await flush();
+
+  assert.equal(s.calls.filter(call => call.url === '/ai/chat').length, 1);
+  assert.equal(s.calls.some(call => call.url === '/ai/messages'), false);
+  assert.equal(s.calls.some(call => call.url === '/ai/memory'), false);
+  assert.equal(s.calls.some(call => call.url.startsWith('/companion/')), false);
+  assert.equal(Array.from(s.storage.keys()).some(key => key.startsWith('wg_ai_save_mode_')), false);
+  assert.equal(s.nodes.input.value, 'guest failing text');
+});

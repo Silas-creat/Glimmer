@@ -1,0 +1,1744 @@
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.ChatCompanion = api;
+})(typeof globalThis === 'undefined' ? window : globalThis, function () {
+  'use strict';
+
+  const GLOBAL = typeof globalThis === 'undefined' ? window : globalThis;
+  const SAVE_KEY_PREFIX = 'wg_ai_save_mode_';
+  const MAX_MESSAGE = 2000;
+  const MAX_DRAFT_TEXT = 5000;
+  const HISTORY_PAGE_SIZE = 30;
+
+  function saveModeKey(uid) {
+    return SAVE_KEY_PREFIX + String(uid || '');
+  }
+
+  function readUserId(user) {
+    if (!user || typeof user !== 'object') return '';
+    const id = user.uid ?? user.id;
+    return id === null || id === undefined ? '' : String(id);
+  }
+
+  function defaultStorage() {
+    try { return GLOBAL.localStorage || null; } catch (e) { return null; }
+  }
+
+  function readSaveMode(uid, storage) {
+    if (!uid) return 'off';
+    const store = storage || defaultStorage();
+    if (!store) return 'off';
+    try { return store.getItem(saveModeKey(uid)) === 'on' ? 'on' : 'off'; } catch (e) { return 'off'; }
+  }
+
+  function writeSaveMode(uid, enabled, storage) {
+    if (!uid) return false;
+    const store = storage || defaultStorage();
+    if (!store) return false;
+    try {
+      store.setItem(saveModeKey(uid), enabled ? 'on' : 'off');
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function localDateKey(date) {
+    const value = date instanceof Date ? date : (date ? new Date(date) : new Date());
+    const safe = Number.isNaN(value.getTime()) ? new Date() : value;
+    const month = String(safe.getMonth() + 1).padStart(2, '0');
+    const day = String(safe.getDate()).padStart(2, '0');
+    return `${safe.getFullYear()}-${month}-${day}`;
+  }
+
+  function isValidDateKey(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const parts = value.split('-').map(Number);
+    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+    return date.getFullYear() === parts[0]
+      && date.getMonth() === parts[1] - 1
+      && date.getDate() === parts[2];
+  }
+
+  function buildDraftMaterial(parts) {
+    const list = Array.isArray(parts) ? parts : [];
+    const text = list
+      .map(part => (typeof part === 'string' ? part.trim() : ''))
+      .filter(Boolean)
+      .join('\n');
+    if (!text) return { ok: false, code: 'EMPTY', text: '', message: '先选择想整理的内容。' };
+    if (text.length > MAX_MESSAGE) {
+      return { ok: false, code: 'TOO_LONG', text: '', message: '选中的内容最多 2000 字，请减少选择。' };
+    }
+    return { ok: true, code: 'OK', text, message: '' };
+  }
+
+  function draftTextIssue(text) {
+    const value = typeof text === 'string' ? text.trim() : '';
+    if (!value) return '日记正文不能为空。';
+    if (value.length > MAX_DRAFT_TEXT) return '日记正文最多 5000 字，请精简后再确认。';
+    return '';
+  }
+
+  function mergeHistoryPages(newer, older) {
+    const result = [];
+    const seen = new Set();
+    for (const item of [...(older || []), ...(newer || [])]) {
+      if (!item) continue;
+      const key = item.id === null || item.id === undefined ? '' : String(item.id);
+      if (key && seen.has(key)) continue;
+      if (key) seen.add(key);
+      result.push(item);
+    }
+    return result;
+  }
+
+function mapDraftError(value) {
+    const code = typeof value === 'number' ? value : Number(value && value.code);
+    const msg = value && typeof value === 'object' ? value.msg : '';
+    const text = String(msg || '');
+    if (code === 40100) return { message: '登录后才能使用这项功能，请先登录。', needsLogin: true };
+    if (code === 40400) return { message: '草稿不存在或无权访问。', needsPrepare: true };
+    if (code === 40900) {
+      if (/已取消/.test(text)) {
+        return { message: '草稿已取消，不能确认；取消草稿不会删除日记。', cancelled: true, terminal: 'cancelled' };
+      }
+      if (/已确认|不能取消|已保存/.test(text)) {
+        return { message: '草稿已确认，不能取消；已保存的日记不会被删除。', confirmed: true, terminal: 'confirmed' };
+      }
+      return { message: '这一天已有日记，草稿不会覆盖；请换一个日期重新准备。', conflict: true, needsPrepare: true, detail: text };
+    }
+    if (code === 41000) {
+      if (/不存在|已被删除|已删除/.test(text)) {
+        return { message: '已保存的日记不存在（可能已被删除），请重新准备。', deleted: true, needsPrepare: true };
+      }
+      return { message: text || '草稿已过期，请重新准备。', expired: true, needsPrepare: true };
+    }
+    if (code === -1) return { message: text || '结果暂时不确定，正在用同一草稿核对…', uncertain: true };
+    if (code === 40000 || code === 400) return { message: msg || '请检查选中的内容和日期。', invalid: true };
+    return { message: msg || '操作失败，请稍后重试。' };
+  }
+
+  function isSafeDiaryUrl(url) {
+    if (typeof url !== 'string') return false;
+    const value = url.trim();
+    if (!value || /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith('//')) return false;
+    const path = value.replace(/^\.?\//, '');
+    const match = /^diary-write\.html\?date=(\d{4}-\d{2}-\d{2})$/.exec(path);
+    return Boolean(match && isValidDateKey(match[1]));
+  }
+
+  function providerText(provider, degraded, configuredOnly) {
+    if (configuredOnly) {
+      if (provider && provider.isReal) return '已配置 AI 服务，发送后确认响应';
+      return '当前为本地支持回复，未使用大模型';
+    }
+    if (provider && provider.isReal && !degraded) return '已连接 AI 服务';
+    return '本地支持回复，未使用大模型';
+  }
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function button(label, className) {
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.className = className;
+    node.textContent = label;
+    return node;
+  }
+
+  function mountChatCompanion(options) {
+    options = options || {};
+    if (typeof document === 'undefined') return null;
+
+    const request = options.api || GLOBAL.api;
+    const createTemporary = options.createTemporaryChat || GLOBAL.createTemporaryChat;
+    const createSaved = options.createSavedChat || GLOBAL.createSavedChat;
+
+    const chatEl = document.getElementById('chat');
+    const inputEl = document.getElementById('input');
+    const sendEl = document.getElementById('send');
+    const statusEl = document.getElementById('model-status');
+    const careEl = document.getElementById('care');
+    const modeNoteEl = document.getElementById('cc-mode-note');
+    const saveToggleEl = document.getElementById('cc-save-toggle');
+    const saveStateEl = document.getElementById('cc-save-state');
+    const saveHintEl = document.getElementById('cc-save-hint');
+    const toolsEl = document.getElementById('cc-tools');
+    const panelEl = document.getElementById('cc-panel');
+    const panelTitleEl = document.getElementById('cc-panel-title');
+    const panelBodyEl = document.getElementById('cc-panel-body');
+    const panelCloseEl = document.getElementById('cc-panel-close');
+
+    if (typeof request !== 'function' || typeof createTemporary !== 'function'
+        || typeof createSaved !== 'function' || !chatEl || !inputEl || !sendEl) return null;
+
+    const state = {
+      mode: 'temporary',
+      session: createTemporary(request),
+      uid: '',
+      token: '',
+      sending: false,
+      turns: [],
+      historyItems: [],
+      historyPage: 1,
+      historyHasMore: false,
+      draft: null,
+      draftTrace: [],
+      draftProvider: '',
+      draftInclude: false,
+      draftBusy: false,
+      draftStatus: '',
+      memorySnapshot: null,
+      identityEpoch: 0,
+      accountBound: false,
+      verifySeq: 0,
+      draftMaterial: null,
+      draftOwner: null,
+      clearEpoch: 0,
+      readSeq: 0,
+      panelKind: '',
+      clearSeq: 0,
+      activeSend: null,
+      sendSeq: 0,
+      stoppedRound: 0,
+    };
+    let lastFocused = null;
+    let modeEpoch = 0;
+    let panelEpoch = 0;
+    let draftEpoch = 0;
+    let restoreSeq = 0;
+    let activeDraftControls = null;
+
+    function getToken() {
+      if (typeof GLOBAL.getToken === 'function') return GLOBAL.getToken() || '';
+      try { return localStorage.getItem('wg_token') || ''; } catch (e) { return ''; }
+    }
+
+    function getStoredUser() {
+      if (typeof GLOBAL.getUser === 'function') return GLOBAL.getUser();
+      try { return JSON.parse(localStorage.getItem('wg_user') || 'null'); } catch (e) { return null; }
+    }
+
+    function setStatus(text) {
+      if (statusEl) statusEl.textContent = text;
+    }
+
+    function showNotice(text) {
+      if (saveStateEl) saveStateEl.textContent = text || '';
+    }
+
+    function showCare(care) {
+      if (!care || !careEl) return;
+      careEl.replaceChildren();
+      const text = document.createElement('p');
+      text.textContent = care.message || '如果你现在不安全，请先联系身边可信任的人或当地紧急服务。也可以尝试以下支持渠道：';
+      careEl.appendChild(text);
+      for (const line of care.lines || []) {
+        const phone = String(line.phone || '').replace(/[^\d+()-]/g, '');
+        if (!phone) continue;
+        const link = document.createElement('a');
+        link.href = 'tel:' + phone;
+        link.textContent = (line.name || '支持渠道') + '：' + phone;
+        careEl.appendChild(link);
+      }
+      careEl.hidden = false;
+    }
+
+    function showProvider(provider, degraded, configuredOnly) {
+      setStatus(providerText(provider, degraded, configuredOnly === true));
+    }
+
+    function addBubble(text, who, track) {
+      const bubble = document.createElement('div');
+      bubble.className = 'msg ' + who;
+      bubble.textContent = String(text === null || text === undefined ? '' : text);
+      chatEl.appendChild(bubble);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      if (track !== false && who !== 'typing') {
+        state.turns.push({ role: who === 'me' ? 'user' : 'assistant', content: bubble.textContent });
+      }
+      return bubble;
+    }
+
+    function updateModeUi() {
+      const saved = state.mode === 'saved';
+      if (modeNoteEl) {
+        modeNoteEl.textContent = saved
+          ? '保存对话 · 已存到本人账号，刷新后可继续'
+          : '临时对话 · 本页保留上下文，刷新后清空';
+      }
+      if (saveToggleEl) saveToggleEl.checked = saved;
+      if (saveHintEl) {
+        saveHintEl.textContent = saved
+          ? '关闭保存不会删除已存记录；要删除请用“清除对话和记忆”。'
+          : '默认按临时对话进行；关闭保存不会删除已存记录。';
+      }
+    }
+
+    function replaceSession(mode) {
+      state.session.invalidate();
+      state.session.reset();
+      state.mode = mode;
+      state.session = mode === 'saved' ? createSaved(request) : createTemporary(request);
+      state.token = getToken();
+      state.sending = false;
+      state.activeSend = null;
+      if (sendEl) sendEl.disabled = false;
+      updateModeUi();
+    }
+
+    function forceTemporary(notice) {
+      modeEpoch += 1;
+      replaceSession('temporary');
+      if (notice) showNotice(notice);
+    }
+
+    async function fetchMe() {
+      try {
+        const res = await request('/auth/me', { silent401: true });
+        if (!res || res.code !== 0) return { ok: false, code: res && res.code, msg: res && res.msg };
+        const user = res.data && res.data.user;
+        const uid = readUserId(user);
+        if (!uid) return { ok: false };
+        return { ok: true, user, uid };
+      } catch (e) {
+        return { ok: false };
+      }
+    }
+
+    async function resolveIdentity(owner) {
+      const bound = owner || {};
+      const expectedUid = bound.uid || state.uid || '';
+      const storedUid = currentUid();
+      if (storedUid && expectedUid && storedUid !== expectedUid) {
+        return { status: 'mismatch', uid: expectedUid, nextUid: storedUid, viaNetwork: false };
+      }
+      const token = getToken();
+      if (!token) {
+        return { status: 'unconfirmed', uid: expectedUid, nextUid: '', viaNetwork: false };
+      }
+      if (state.token && token === state.token) {
+        return { status: 'consistent', uid: expectedUid || state.uid, nextUid: '', viaNetwork: false };
+      }
+      const me = await fetchMe();
+      if (!me.ok) {
+        return { status: 'unconfirmed', uid: expectedUid, nextUid: '', viaNetwork: true };
+      }
+      if (expectedUid && me.uid !== expectedUid) {
+        return { status: 'mismatch', uid: expectedUid, nextUid: me.uid, viaNetwork: true };
+      }
+      state.token = getToken();
+      if (!state.uid) state.uid = me.uid;
+      return { status: 'consistent', uid: me.uid, nextUid: '', viaNetwork: true };
+    }
+
+    function createVerificationTicket(kind, options) {
+      const opts = options || {};
+      const ticket = {
+        kind,
+        seq: ++state.verifySeq,
+        uid: opts.uid !== undefined ? opts.uid : (state.uid || ''),
+        tokenAtStart: getToken(),
+        boundTokenAtStart: opts.boundToken !== undefined ? opts.boundToken : state.token,
+        identityEpoch: opts.identityEpoch !== undefined ? opts.identityEpoch : state.identityEpoch,
+        opSeq: opts.opSeq || 0,
+        panelEpoch: opts.panelEpoch !== undefined ? opts.panelEpoch : panelEpoch,
+        sessionGen: opts.sessionGen || 0,
+        session: opts.session || null,
+        draftId: opts.draftId || '',
+        modeEpoch,
+        restoreSeq: typeof restoreSeq === 'number' ? restoreSeq : 0,
+        text: opts.text || '',
+        forceNetwork: opts.forceNetwork === true,
+      };
+      return ticket;
+    }
+
+    function identityChangedFor(ticket) {
+      if (!ticket) return '';
+      const storedUid = currentUid();
+      if (storedUid && ticket.uid && storedUid !== ticket.uid) return storedUid;
+      if (state.uid && ticket.uid && state.uid !== ticket.uid) return state.uid;
+      return '';
+    }
+
+    function isOperationPreflightValid(ticket) {
+      if (!ticket) return false;
+      if (identityChangedFor(ticket)) return false;
+      if (ticket.identityEpoch !== state.identityEpoch) return false;
+      if (ticket.kind === 'prepare') {
+        if (ticket.panelEpoch !== panelEpoch) return false;
+        if (state.draftStatus === 'stopped') return false;
+        return true;
+      }
+      return isOperationStillValid(ticket);
+    }
+
+    function isOperationStillValid(ticket) {
+      if (!ticket) return false;
+      if (identityChangedFor(ticket)) return false;
+      if (ticket.identityEpoch !== state.identityEpoch) return false;
+      if (ticket.kind === 'prepare' || ticket.kind === 'confirm' || ticket.kind === 'cancel') {
+        if (ticket.panelEpoch !== panelEpoch) return false;
+        if (ticket.opSeq !== draftEpoch) return false;
+        if (ticket.kind === 'prepare') {
+          if (state.draftStatus === 'stopped') return false;
+        } else {
+          if (!state.draft || state.draft.id !== ticket.draftId) return false;
+          if (state.draftStatus !== 'pending') return false;
+        }
+      }
+      if (ticket.kind === 'send') {
+        if (!state.activeSend || state.activeSend.id !== ticket.opSeq) return false;
+        if (ticket.session && state.session !== ticket.session) return false;
+        if (ticket.sessionGen !== 0 && state.session.generation !== ticket.sessionGen) return false;
+        if (ticket.text && inputEl.value.trim() !== ticket.text) return false;
+      }
+      if (ticket.kind === 'restore') {
+        if (ticket.modeEpoch !== modeEpoch) return false;
+        if (ticket.restoreSeq !== restoreSeq) return false;
+      }
+      return true;
+    }
+
+    async function verifyIdentity(ticket) {
+      if (!ticket) return { status: 'op-obsolete', ticket };
+      const changed = identityChangedFor(ticket);
+      if (changed) return { status: 'identity-changed', ticket, nextUid: changed };
+      if (ticket.identityEpoch !== state.identityEpoch) return { status: 'op-obsolete', ticket };
+      if (ticket.kind === 'prepare' || ticket.kind === 'confirm' || ticket.kind === 'cancel') {
+        if (ticket.panelEpoch !== panelEpoch || ticket.opSeq !== draftEpoch) return { status: 'op-obsolete', ticket };
+      }
+      if (ticket.kind === 'restore' && (ticket.modeEpoch !== modeEpoch || ticket.restoreSeq !== restoreSeq)) {
+        return { status: 'op-obsolete', ticket };
+      }
+      const tokenNow = getToken();
+      if (tokenNow !== ticket.tokenAtStart) return { status: 'op-obsolete', ticket };
+      if (!ticket.forceNetwork && ticket.tokenAtStart !== '' && ticket.tokenAtStart === state.token) {
+        return { status: 'valid-same-account', ticket, uid: ticket.uid || state.uid };
+      }
+      if (ticket.tokenAtStart === '' && !ticket.forceNetwork) {
+        return { status: 'valid-same-account', ticket, uid: ticket.uid || state.uid };
+      }
+      const me = await fetchMe();
+      if (identityChangedFor(ticket)) return { status: 'identity-changed', ticket, nextUid: identityChangedFor(ticket) };
+      if (ticket.identityEpoch !== state.identityEpoch) return { status: 'op-obsolete', ticket };
+      if (ticket.kind === 'prepare' || ticket.kind === 'confirm' || ticket.kind === 'cancel') {
+        if (ticket.panelEpoch !== panelEpoch || ticket.opSeq !== draftEpoch) return { status: 'op-obsolete', ticket };
+      }
+      if (ticket.kind === 'restore' && (ticket.modeEpoch !== modeEpoch || ticket.restoreSeq !== restoreSeq)) {
+        return { status: 'op-obsolete', ticket };
+      }
+      if (getToken() !== tokenNow || getToken() !== ticket.tokenAtStart) return { status: 'op-obsolete', ticket };
+      if (!me.ok) return { status: 'unconfirmed', ticket };
+      if (ticket.uid && me.uid !== ticket.uid) return { status: 'identity-changed', ticket, nextUid: me.uid };
+      state.token = getToken();
+      if (!state.uid) state.uid = me.uid;
+      return { status: 'valid-same-account', ticket, uid: me.uid, user: me.user };
+    }
+
+    function handleVerificationFailure(result, notice) {
+      const ticket = result && result.ticket;
+      if (result && result.status === 'identity-changed') {
+        const nextUid = result.nextUid || '';
+        if (nextUid && nextUid !== state.uid) {
+          switchAccount(nextUid, notice || '账号或登录状态已变化，请重新选择');
+        } else {
+          showNotice(notice || '账号或登录状态已变化，请重新选择');
+        }
+        return;
+      }
+      if (result && result.status === 'unconfirmed' && ticket && ticket.identityEpoch === state.identityEpoch) {
+        state.identityEpoch += 1;
+      }
+      showNotice(notice || ((result && result.status === 'unconfirmed')
+        ? '登录状态暂时无法确认，本次未提交，请稍后重试'
+        : '操作已失效或面板已关闭，本次未提交'));
+    }
+
+    function stopForIdentity(identity, notice) {
+      if (identity && identity.status === 'unconfirmed') state.identityEpoch += 1;
+      if (identity && identity.status === 'mismatch') {
+        switchAccount(identity.nextUid || '', notice || '账号或登录状态已变化，请重新选择');
+      } else {
+        showNotice(notice || '登录状态暂时无法确认，请重新登录后再试');
+      }
+    }
+
+    function isDraftResponseCurrent(owner) {
+      if (!owner) return false;
+      if (owner.panelEpoch !== panelEpoch) return false;
+      if (owner.draftEpoch !== draftEpoch) return false;
+      if (owner.identityEpoch !== state.identityEpoch) return false;
+      const uid = currentUid();
+      if (owner.uid && uid && owner.uid !== uid) return false;
+      return true;
+    }
+
+    function createReadTicket(kind, page) {
+      return {
+        kind,
+        page,
+        uid: currentUid() || state.uid,
+        identityEpoch: state.identityEpoch,
+        clearEpoch: state.clearEpoch,
+        panelEpoch,
+        seq: ++state.readSeq,
+      };
+    }
+
+    function isReadValid(ticket) {
+      if (!ticket) return false;
+      if (ticket.uid !== (currentUid() || state.uid)) return false;
+      if (ticket.identityEpoch !== state.identityEpoch) return false;
+      if (ticket.clearEpoch !== state.clearEpoch) return false;
+      if (ticket.panelEpoch !== panelEpoch) return false;
+      return true;
+    }
+
+    function judgeClearResponse(op) {
+      if (!op || op.id !== state.clearSeq) return 'discard';
+      const uid = currentUid() || state.uid;
+      if (op.uid && uid && op.uid !== uid) return 'discard';
+      if (op.identityEpoch !== state.identityEpoch) return 'discard';
+      const samePanel = op.panelToken === panelEpoch && state.panelKind === 'clear' && panelEl && !panelEl.hidden;
+      return samePanel ? 'context-and-panel' : 'context-only';
+    }
+
+
+    function currentUid() {
+      return readUserId(getStoredUser());
+    }
+
+    function resetAccountView(nextUid) {
+      modeEpoch += 1;
+      panelEpoch += 1;
+      draftEpoch += 1;
+      state.identityEpoch += 1;
+      if (state.session) {
+        state.session.invalidate();
+        state.session.reset();
+      }
+      state.session = createTemporary(request);
+      state.mode = 'temporary';
+      state.uid = nextUid || '';
+      state.token = getToken();
+      state.accountBound = Boolean(nextUid);
+      state.clearEpoch += 1;
+      state.readSeq += 1;
+      state.sending = false;
+      state.activeSend = null;
+      if (sendEl) sendEl.disabled = false;
+      state.turns = [];
+      state.historyItems = [];
+      state.historyPage = 1;
+      state.historyHasMore = false;
+      state.draft = null;
+      state.draftTrace = [];
+      state.draftProvider = '';
+      state.draftInclude = false;
+      state.draftBusy = false;
+      state.draftStatus = '';
+      state.draftMaterial = null;
+      state.draftOwner = null;
+      state.stoppedRound = 0;
+      state.panelKind = '';
+      state.memorySnapshot = null;
+      activeDraftControls = null;
+      chatEl.replaceChildren();
+      if (careEl) { careEl.hidden = true; careEl.replaceChildren(); }
+      if (panelEl) panelEl.hidden = true;
+      if (panelBodyEl) panelBodyEl.replaceChildren();
+      if (saveToggleEl) saveToggleEl.checked = false;
+      updateModeUi();
+    }
+
+    async function restoreSavedForAccount(expectedUid) {
+      const ticket = createVerificationTicket('restore', {
+        uid: expectedUid,
+        restoreSeq: ++restoreSeq,
+        forceNetwork: true,
+      });
+      const verification = await verifyIdentity(ticket);
+      if (verification.status !== 'valid-same-account') {
+        if (verification.status === 'identity-changed' && verification.nextUid && verification.nextUid !== state.uid) {
+          switchAccount(verification.nextUid, '检测到账号变化，已回到临时对话');
+        } else if (verification.status === 'unconfirmed') {
+          showNotice('登录状态暂时无法确认，已回到临时对话');
+        }
+        return false;
+      }
+      if (!isOperationStillValid(ticket)) return false;
+      state.uid = expectedUid;
+      state.token = getToken();
+      state.accountBound = true;
+      if (typeof GLOBAL.setUser === 'function' && verification.user) GLOBAL.setUser(verification.user);
+      if (readSaveMode(state.uid) !== 'on') return false;
+      replaceSession('saved');
+      try {
+        await loadHistory(true, true);
+      } catch (e) {
+        showNotice(e.message || '历史暂时加载失败');
+      }
+      return true;
+    }
+
+    function switchAccount(nextUid, notice) {
+      if (nextUid === state.uid) return;
+      resetAccountView(nextUid);
+      showNotice(notice || '检测到账号变化，已回到临时对话');
+      addBubble('检测到账号变化，已回到临时对话。', 'ai', false);
+      if (state.uid && state.token && readSaveMode(state.uid) === 'on') {
+        restoreSavedForAccount(state.uid);
+      }
+    }
+
+    async function ensureCurrentAccount() {
+      const storedUid = currentUid();
+      if (storedUid && storedUid !== state.uid) {
+        switchAccount(storedUid, '检测到账号切换，已回到临时对话；请重新选择是否保存');
+        return false;
+      }
+      if (state.token && getToken() !== state.token) {
+        const me = await fetchMe();
+        if (!me.ok) {
+          switchAccount('', '登录状态已变化，已回到临时对话');
+          return false;
+        }
+        if (me.uid !== state.uid) {
+          switchAccount(me.uid, '检测到账号切换，已回到临时对话；请重新选择是否保存');
+          return false;
+        }
+        state.token = getToken();
+      }
+      return true;
+    }
+
+    function openPanel(title, kind) {
+      if (!panelEl || !panelBodyEl) return 0;
+      panelEpoch += 1;
+      state.panelKind = kind || '';
+      lastFocused = document.activeElement;
+      if (panelTitleEl) panelTitleEl.textContent = title;
+      panelBodyEl.replaceChildren();
+      panelEl.hidden = false;
+      if (panelCloseEl) panelCloseEl.focus();
+      return panelEpoch;
+    }
+
+    function closePanel() {
+      if (!panelEl) return;
+      panelEpoch += 1;
+      draftEpoch += 1;
+      state.panelKind = '';
+      state.draftBusy = false;
+      activeDraftControls = null;
+      panelEl.hidden = true;
+      if (panelBodyEl) panelBodyEl.replaceChildren();
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+      lastFocused = null;
+    }
+
+    function appendMessage(text, className) {
+      const node = element('p', className, text);
+      panelBodyEl.appendChild(node);
+      return node;
+    }
+
+    function appendCare(care) {
+      if (!care) return;
+      showCare(care);
+      const note = element('p', 'cc-note', care.message || '如果你现在不安全，请先联系身边可信任的人。');
+      panelBodyEl.appendChild(note);
+    }
+
+    function appendCareFull(care) {
+      if (!care) return;
+      showCare(care);
+      const box = element('div', 'cc-note cc-care');
+      box.appendChild(element('p', '', care.message || '如果你现在不安全，请先联系身边可信任的人或当地紧急服务。'));
+      for (const line of care.lines || []) {
+        const phone = String(line.phone || '').replace(/[^\d+()-]/g, '');
+        if (!phone) continue;
+        const link = document.createElement('a');
+        link.href = 'tel:' + phone;
+        link.textContent = (line.name || '支持渠道') + '：' + phone;
+        box.appendChild(link);
+      }
+      panelBodyEl.appendChild(box);
+    }
+
+    function responseCare(res) {
+      return res && res.data && res.data.care ? res.data.care : null;
+    }
+
+    async function loadHistory(replace, intoChat) {
+      const page = replace ? 1 : state.historyPage + 1;
+      const session = state.session;
+      const token = session.generation;
+      const ticket = createReadTicket('history', page);
+      const res = await request(`/ai/messages?page=${page}&size=${HISTORY_PAGE_SIZE}`, { silent401: true });
+      if (!res || res.code !== 0) {
+        const error = new Error((res && res.msg) || '历史暂时加载失败');
+        error.code = res && res.code;
+        error.care = responseCare(res);
+        throw error;
+      }
+      if (state.session !== session || session.isStale(token) || !isReadValid(ticket)) return state.historyItems;
+      const list = Array.isArray(res.data && res.data.list) ? res.data.list : [];
+      state.historyItems = page === 1
+        ? mergeHistoryPages([], list)
+        : mergeHistoryPages(state.historyItems, list);
+      state.historyPage = page;
+      state.historyHasMore = Boolean(res.data && res.data.hasMore);
+      if (intoChat && state.session === session && !session.isStale(token)) renderHistoryIntoChat();
+      return state.historyItems;
+    }
+
+    function renderHistoryIntoChat() {
+      chatEl.replaceChildren();
+      state.turns = [];
+      for (const item of state.historyItems) {
+        addBubble(item.content || '', item.isMine ? 'me' : 'ai');
+      }
+      if (!state.historyItems.length) {
+        addBubble('还没有已保存的聊天记录。', 'ai', false);
+      }
+    }
+
+    function historyItemNode(item) {
+      const card = element('div', 'cc-history-item');
+      const role = element('span', 'cc-history-role', item.isMine ? '我' : '小陪');
+      if (item.time) role.appendChild(element('span', 'cc-history-time', item.time));
+      card.appendChild(role);
+      card.appendChild(element('div', 'cc-history-text', item.content || ''));
+      return card;
+    }
+
+    function renderHistoryPanel(error, token) {
+      if (token !== panelEpoch) return;
+      panelBodyEl.replaceChildren();
+      if (error) {
+        appendCare(error.care);
+        if (error.code === 40100) appendMessage('登录后才能查看历史对话。', 'cc-error');
+        else appendMessage(error.message || '历史暂时加载失败。', 'cc-error');
+        return;
+      }
+      if (!state.historyItems.length) {
+        appendMessage('还没有已保存的聊天记录。', 'cc-muted');
+        return;
+      }
+      const list = element('div', 'cc-history');
+      for (const item of state.historyItems) list.appendChild(historyItemNode(item));
+      panelBodyEl.appendChild(list);
+      if (state.historyHasMore) {
+        const more = button('加载更早', 'cc-secondary');
+        more.onclick = async () => {
+          if (token !== panelEpoch) return;
+          more.disabled = true;
+          try {
+            await loadHistory(false, false);
+            renderHistoryPanel(null, token);
+          } catch (e) {
+            if (token !== panelEpoch) return;
+            more.disabled = false;
+            appendMessage(e.message || '更早的记录暂时加载失败。', 'cc-error');
+          }
+        };
+        panelBodyEl.appendChild(more);
+      } else {
+        appendMessage('已经是最早的记录。', 'cc-muted');
+      }
+    }
+
+    async function openHistoryPanel() {
+      const kind = classifySession();
+      if (kind === 'signed-out-with-context') isolateSignedOutContext('removed');
+      if (classifySession() !== 'signed-in') {
+        const authToken = openPanel('历史对话', 'history');
+        if (!authToken) return;
+        appendMessage('登录后才能查看历史对话。', 'cc-muted');
+        return;
+      }
+      const token = openPanel('历史对话', 'history');
+      if (!token) return;
+      appendMessage('正在读取本人聊天记录…', 'cc-muted');
+      try {
+        await loadHistory(true, false);
+        renderHistoryPanel(null, token);
+      } catch (e) {
+        renderHistoryPanel(e, token);
+      }
+    }
+
+    async function openMemoryPanel() {
+      const kind = classifySession();
+      if (kind === 'signed-out-with-context') isolateSignedOutContext('removed');
+      if (classifySession() !== 'signed-in') {
+        const authToken = openPanel('你记得我什么', 'memory');
+        if (!authToken) return;
+        appendMessage('登录后才能查看记忆。', 'cc-muted');
+        return;
+      }
+      const token = openPanel('你记得我什么', 'memory');
+      if (!token) return;
+      appendMessage('正在读取记忆摘要…', 'cc-muted');
+      const ticket = createReadTicket('memory', 1);
+      let res;
+      try { res = await request('/ai/memory', { silent401: true }); }
+      catch (e) { res = { code: -1, msg: '网络不太好，请稍后再试' }; }
+      if (!isReadValid(ticket)) return;
+      if (!res || res.code !== 0) {
+        panelBodyEl.replaceChildren();
+        appendCare(responseCare(res));
+        if (res && res.code === 40100) appendMessage('登录后才能查看记忆。', 'cc-error');
+        else appendMessage((res && res.msg) || '记忆暂时加载失败。', 'cc-error');
+        return;
+      }
+      const data = res.data || {};
+      state.memorySnapshot = data;
+      panelBodyEl.replaceChildren();
+      if (data.hasMemory && data.summary) {
+        appendMessage('小陪整理出的长期摘要：', 'cc-muted');
+        appendMessage(data.summary, '');
+      } else if (Number(data.totalMessages) > 0) {
+        appendMessage(`暂无摘要，但已有 ${Number(data.totalMessages)} 条聊天记录。`, 'cc-note');
+      } else {
+        appendMessage('还没有聊天记录。', 'cc-muted');
+      }
+      appendMessage(`共 ${Number(data.totalMessages) || 0} 条聊天记录；${Number(data.pendingMessages) || 0} 条尚未整理进摘要。`, 'cc-muted');
+      appendMessage('最近聊天：' + (data.lastChatTime || data.lastChat || '暂无最近聊天'), 'cc-muted');
+    }
+
+    function openClearPanel() {
+      const kind = classifySession();
+      if (kind === 'signed-out-with-context') isolateSignedOutContext('removed');
+      if (classifySession() !== 'signed-in') {
+        const authToken = openPanel('清除对话和记忆', 'clear');
+        if (!authToken) return;
+        appendMessage('登录后才能清除记录。', 'cc-muted');
+        return;
+      }
+      const token = openPanel('清除对话和记忆', 'clear');
+      if (!token) return;
+      appendMessage('将清空本人聊天记录与长期摘要，不会删除日记和日记草稿。', 'cc-note');
+      appendMessage('关闭保存不等于清除；清除失败时页面会保留原有内容。', 'cc-muted');
+      const status = appendMessage('', 'cc-muted');
+      const actions = element('div', 'cc-actions');
+      const confirm = button('确认清除', 'cc-danger');
+      const cancel = button('取消', 'cc-secondary');
+      cancel.onclick = () => { closePanel(); showNotice('已取消清除'); };
+      confirm.onclick = async () => {
+        const op = {
+          id: ++state.clearSeq,
+          uid: currentUid() || state.uid,
+          identityEpoch: state.identityEpoch,
+          panelToken: panelEpoch,
+          sessionGen: state.session.generation,
+        };
+        confirm.disabled = true;
+        status.className = 'cc-muted';
+        status.textContent = '正在清除…';
+        let res;
+        try { res = await request('/ai/memory', { method: 'DELETE', silent401: true }); }
+        catch (e) { res = { code: -1, msg: '网络不太好，请稍后再试' }; }
+        const outcome = judgeClearResponse(op);
+        if (outcome === 'discard') return;
+        if (!res || res.code !== 0) {
+          if (outcome === 'context-and-panel') {
+            appendCare(responseCare(res));
+            status.className = 'cc-error';
+            status.textContent = (res && res.msg) || '清除失败，原有内容已保留。';
+            if (state.memorySnapshot && state.memorySnapshot.summary) {
+              appendMessage('服务端摘要仍然保留，可关闭后重新查看。', 'cc-muted');
+            }
+          }
+          confirm.disabled = false;
+          return;
+        }
+        state.clearEpoch += 1;
+        state.readSeq += 1;
+        replaceSession(state.mode);
+        state.memorySnapshot = null;
+        chatEl.replaceChildren();
+        state.turns = [];
+        state.historyItems = [];
+        state.historyPage = 1;
+        state.historyHasMore = false;
+        if (careEl) { careEl.hidden = true; careEl.replaceChildren(); }
+        const deleted = Number(res.data && res.data.deleted) || 0;
+        if (outcome === 'context-and-panel') {
+          status.className = 'cc-note';
+          status.textContent = `已清除 ${deleted} 条聊天记录和摘要。`;
+        } else if (state.panelKind === 'memory') {
+          panelBodyEl.replaceChildren();
+          appendMessage('还没有聊天记录。', 'cc-muted');
+        } else if (state.panelKind === 'history') {
+          panelBodyEl.replaceChildren();
+          appendMessage('还没有已保存的聊天记录。', 'cc-muted');
+        }
+        showNotice('已清除本人聊天记录和摘要');
+        addBubble('已经从服务端清除本人的聊天记录和摘要。', 'ai', false);
+      };
+      actions.appendChild(confirm);
+      actions.appendChild(cancel);
+      panelBodyEl.appendChild(actions);
+    }
+
+    function selectedTurns() {
+      const checked = panelBodyEl.querySelectorAll('input[name="cc-turn"]:checked');
+      const parts = [];
+      checked.forEach(input => {
+        const index = Number(input.value);
+        if (state.turns[index]) parts.push(state.turns[index].content);
+      });
+      return parts;
+    }
+
+    function renderDraftSelection(sourceTurns) {
+      draftEpoch += 1;
+      state.draftStatus = '';
+      state.draftBusy = false;
+      state.stoppedRound = 0;
+      activeDraftControls = null;
+      const turns = Array.isArray(sourceTurns) ? sourceTurns : state.turns;
+      state.draftMaterial = {
+        uid: currentUid() || state.uid,
+        identityEpoch: state.identityEpoch,
+        panelEpoch,
+        draftEpoch,
+        parts: turns.map(turn => (turn && typeof turn.content === 'string' ? turn.content : '')).filter(Boolean),
+      };
+      panelBodyEl.replaceChildren();
+      appendMessage('选择想整理成私密日记的内容。默认只整理你勾选的内容，不会读取其他日记。', '');
+      if (!turns.length) {
+        appendMessage('还没有可以整理的内容，先说几句吧。', 'cc-muted');
+      }
+      const list = element('div', 'cc-check-list');
+      turns.forEach((turn, index) => {
+        const label = document.createElement('label');
+        label.className = 'cc-check';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.name = 'cc-turn';
+        input.value = String(index);
+        input.addEventListener('change', updateDraftCounter);
+        label.appendChild(input);
+        const text = element('span', '', (turn.role === 'user' ? '我说：' : '小陪：') + turn.content);
+        label.appendChild(text);
+        list.appendChild(label);
+      });
+      panelBodyEl.appendChild(list);
+
+      const counter = element('p', 'cc-muted', '已选 0 字 / 最多 2000 字');
+      panelBodyEl.appendChild(counter);
+
+      const dateField = element('div', 'cc-field');
+      dateField.appendChild(element('span', '', '日记日期'));
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.value = localDateKey(new Date());
+      dateInput.setAttribute('aria-label', '日记日期');
+      dateField.appendChild(dateInput);
+      panelBodyEl.appendChild(dateField);
+
+      const consent = document.createElement('label');
+      consent.className = 'cc-check';
+      const include = document.createElement('input');
+      include.type = 'checkbox';
+      include.addEventListener('change', () => {
+        appendMessage(include.checked ? '已授权读取目标日期往前 7 天内的本人日记。' : '未授权读取近期日记。', 'cc-muted');
+      });
+      consent.appendChild(include);
+      consent.appendChild(element('span', '', '参考我最近的日记（主动授权后才读取）'));
+      panelBodyEl.appendChild(consent);
+
+      const status = appendMessage('', 'cc-muted');
+      const actions = element('div', 'cc-actions');
+      const prepare = button('生成草稿', 'cc-primary');
+      prepare.disabled = turns.length === 0;
+      prepare.onclick = () => prepareDraft(prepare, dateInput, include, status);
+      actions.appendChild(prepare);
+      panelBodyEl.appendChild(actions);
+
+      function updateDraftCounter() {
+        const material = buildDraftMaterial(selectedTurns());
+        if (!material.ok && material.code === 'EMPTY') {
+          counter.textContent = '已选 0 字 / 最多 2000 字';
+        } else {
+          const length = material.ok ? material.text.length : selectedTurns().join('\n').trim().length;
+          counter.textContent = `已选 ${length} 字 / 最多 2000 字`;
+          counter.className = length > 2000 ? 'cc-error' : 'cc-muted';
+        }
+      }
+    }
+
+    async function prepareDraft(buttonEl, dateInput, includeInput, status) {
+      if (state.draftStatus === 'stopped') return;
+      const material = buildDraftMaterial(selectedTurns());
+      if (!material.ok) {
+        status.className = 'cc-error';
+        status.textContent = material.message;
+        return;
+      }
+      if (!isValidDateKey(dateInput.value)) {
+        status.className = 'cc-error';
+        status.textContent = '请选择一个有效的日记日期。';
+        return;
+      }
+      const panel = panelEpoch;
+      const op = ++draftEpoch;
+      const bound = state.draftMaterial;
+      const ticket = createVerificationTicket('prepare', {
+        uid: bound ? bound.uid : (currentUid() || state.uid),
+        identityEpoch: bound ? bound.identityEpoch : state.identityEpoch,
+        opSeq: op,
+        panelEpoch: panel,
+        text: material.text,
+      });
+      buttonEl.disabled = true;
+      status.className = 'cc-muted';
+      status.textContent = '正在生成草稿…';
+      const verification = await verifyIdentity(ticket);
+      if (verification.status !== 'valid-same-account') {
+        state.draftMaterial = null;
+        if (panelEl && !panelEl.hidden && panel === panelEpoch) {
+          buttonEl.disabled = false;
+          status.className = 'cc-error';
+          status.textContent = verification.status === 'identity-changed'
+            ? '账号或登录状态已变化，请重新选择并重新生成草稿。'
+            : '操作已失效或登录状态无法确认，本次未提交。';
+        }
+        handleVerificationFailure(verification, verification.status === 'identity-changed'
+          ? '账号或登录状态已变化，请重新选择'
+          : undefined);
+        return;
+      }
+      if (!isOperationPreflightValid(ticket)) {
+        showNotice('操作已失效或面板已关闭，本次未提交');
+        return;
+      }
+      let res;
+      try {
+        res = await request('/companion/prepare', {
+          method: 'POST',
+          silent401: true,
+          body: {
+            message: material.text,
+            date: dateInput.value,
+            includeRecentDiaries: includeInput.checked === true,
+          },
+        });
+      } catch (e) {
+        res = { code: -1, msg: '网络不太好，请稍后再试' };
+      }
+      if (!isOperationStillValid(ticket)) return;
+      if (!res || res.code !== 0) {
+        buttonEl.disabled = false;
+        const info = mapDraftError(res);
+        appendCare(responseCare(res));
+        status.className = 'cc-error';
+        status.textContent = info.message;
+        return;
+      }
+      if (!res.data || !res.data.draft) {
+        state.draft = null;
+        state.draftStatus = 'stopped';
+        state.stoppedRound = op;
+        renderStopped(res.data && res.data.care);
+        return;
+      }
+      buttonEl.disabled = false;
+      state.draft = res.data.draft;
+      state.draftStatus = state.draft.status || 'pending';
+      state.draftTrace = Array.isArray(res.data.trace) ? res.data.trace : [];
+      state.draftProvider = res.data.provider || res.data.draft.provider || '';
+      state.draftInclude = includeInput.checked === true;
+      state.draftOwner = {
+        id: state.draft.id,
+        uid: ticket.uid,
+        identityEpoch: ticket.identityEpoch,
+        panelEpoch: panel,
+        draftEpoch: op,
+      };
+      renderDraftPreview();
+    }
+
+    function renderStopped(care) {
+      panelBodyEl.replaceChildren();
+      appendMessage('已停止生成。先照顾好自己，这里暂不保存日记。', 'cc-note');
+      appendCareFull(care);
+      const actions = element('div', 'cc-actions');
+      const close = button('关闭', 'cc-secondary');
+      const back = button('返回聊天', 'cc-primary');
+      close.onclick = closePanel;
+      back.onclick = closePanel;
+      actions.appendChild(close);
+      actions.appendChild(back);
+      panelBodyEl.appendChild(actions);
+    }
+
+    function setDraftBusy(busy) {
+      state.draftBusy = busy;
+      const controls = activeDraftControls;
+      if (!controls) return;
+      const terminal = state.draftStatus && state.draftStatus !== 'pending';
+      controls.confirm.disabled = busy || terminal;
+      controls.cancel.disabled = busy || terminal;
+      controls.back.disabled = busy;
+      controls.textarea.disabled = busy || terminal;
+    }
+
+    function renderDraftPreview() {
+      panelBodyEl.replaceChildren();
+      const draft = state.draft;
+      appendMessage('尚未保存为日记，草稿已暂存服务端。', 'cc-note');
+
+      const meta = element('div', 'cc-preview-meta');
+      meta.appendChild(element('span', '', '日期：' + draft.date));
+      meta.appendChild(element('span', '', '可见性：私密'));
+      if (state.draftProvider) meta.appendChild(element('span', '', '生成方式：' + state.draftProvider));
+      panelBodyEl.appendChild(meta);
+
+      if (state.draftProvider === 'local') {
+        appendMessage('本地规则保留原话，不是大模型生成。', 'cc-muted');
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.className = 'cc-draft-text';
+      textarea.value = draft.text || '';
+      textarea.setAttribute('aria-label', '可编辑的日记正文');
+      panelBodyEl.appendChild(textarea);
+
+      const counter = element('p', 'cc-muted', `${textarea.value.length} / 5000 字`);
+      textarea.addEventListener('input', () => {
+        counter.textContent = `${textarea.value.length} / 5000 字`;
+        counter.className = textarea.value.length > MAX_DRAFT_TEXT ? 'cc-error' : 'cc-muted';
+      });
+      panelBodyEl.appendChild(counter);
+
+      if (Array.isArray(draft.sources) && draft.sources.length) {
+        const title = element('p', 'cc-muted', '参考来源：');
+        panelBodyEl.appendChild(title);
+        const list = document.createElement('ul');
+        list.className = 'cc-sources';
+        for (const source of draft.sources) {
+          const item = document.createElement('li');
+          const label = source.date || source.id || '本人日记';
+          if (isSafeDiaryUrl(source.url)) {
+            const link = document.createElement('a');
+            link.href = source.url;
+            link.textContent = label;
+            item.appendChild(link);
+          } else {
+            item.textContent = label;
+          }
+          list.appendChild(item);
+        }
+        panelBodyEl.appendChild(list);
+      } else {
+        appendMessage('未参考近期日记。', 'cc-muted');
+      }
+
+      if (state.draftTrace.length) {
+        const title = element('p', 'cc-muted', '执行步骤：');
+        panelBodyEl.appendChild(title);
+        const list = document.createElement('ul');
+        list.className = 'cc-trace';
+        for (const step of state.draftTrace) {
+          list.appendChild(element('li', '', `${step.step || '步骤'}：${step.message || step.status || ''}`));
+        }
+        panelBodyEl.appendChild(list);
+      }
+
+      const status = appendMessage('', 'cc-muted');
+      const actions = element('div', 'cc-actions');
+      const confirm = button('确认保存为私密日记', 'cc-primary');
+      const cancel = button('取消草稿', 'cc-secondary');
+      const back = button('返回修改选择', 'cc-secondary');
+      activeDraftControls = { confirm, cancel, back, textarea, status };
+      confirm.onclick = () => confirmDraft(confirm, status, textarea);
+      cancel.onclick = () => cancelDraft(cancel, status);
+      back.onclick = () => {
+        if (state.draftBusy) return;
+        state.draft = null;
+        renderDraftSelection();
+      };
+      actions.appendChild(confirm);
+      actions.appendChild(cancel);
+      actions.appendChild(back);
+      panelBodyEl.appendChild(actions);
+      setDraftBusy(false);
+    }
+
+    function renderConfirmSuccess(data, care) {
+      activeDraftControls = null;
+      panelBodyEl.replaceChildren();
+      appendMessage('已保存为私密日记。', 'cc-note');
+      appendMessage('日记编号：' + (data.diaryId || '未返回'), 'cc-muted');
+      appendMessage('日期：' + (data.date || state.draft.date), 'cc-muted');
+      if (data.isPublic === false) appendMessage('可见性：私密', 'cc-muted');
+      else if (data.isPublic === true) appendMessage('可见性：公开（以服务端返回为准）', 'cc-muted');
+      else appendMessage('可见性：以日记页显示为准', 'cc-muted');
+
+      if (isSafeDiaryUrl(data.url)) {
+        const link = document.createElement('a');
+        link.href = data.url;
+        link.textContent = '打开这篇日记';
+        panelBodyEl.appendChild(link);
+      } else if (data.url) {
+        appendMessage('日记链接：' + data.url, 'cc-muted');
+      }
+
+      if (care) appendCareFull(care);
+
+      const actions = element('div', 'cc-actions');
+      const again = button('再整理一段', 'cc-secondary');
+      const close = button('关闭', 'cc-primary');
+      again.onclick = () => { state.draft = null; renderDraftSelection(); };
+      close.onclick = closePanel;
+      actions.appendChild(close);
+      actions.appendChild(again);
+      panelBodyEl.appendChild(actions);
+    }
+
+    async function confirmDraft(buttonEl, status, textarea) {
+      if (!state.draft || state.draftBusy) return;
+      if (state.draftStatus !== 'pending') {
+        status.className = 'cc-error';
+        status.textContent = state.draftStatus === 'cancelled'
+          ? '草稿已取消，不能确认；如需请返回重新准备。'
+          : '草稿已确认，不能重复提交。';
+        setDraftBusy(false);
+        return;
+      }
+      const issue = draftTextIssue(textarea.value);
+      if (issue) {
+        status.className = 'cc-error';
+        status.textContent = issue;
+        return;
+      }
+      const id = state.draft.id;
+      const panel = panelEpoch;
+      const op = ++draftEpoch;
+      const text = textarea.value.trim();
+      const bound = state.draftOwner;
+      const ticket = createVerificationTicket('confirm', {
+        uid: bound ? bound.uid : (currentUid() || state.uid),
+        identityEpoch: bound ? bound.identityEpoch : state.identityEpoch,
+        opSeq: op,
+        panelEpoch: panel,
+        draftId: id,
+        text,
+      });
+      setDraftBusy(true);
+      status.className = 'cc-muted';
+      status.textContent = '正在保存…';
+      const verification = await verifyIdentity(ticket);
+      if (verification.status !== 'valid-same-account') {
+        setDraftBusy(false);
+        if (panelEl && !panelEl.hidden && panel === panelEpoch) {
+          status.className = 'cc-error';
+          status.textContent = verification.status === 'identity-changed'
+            ? '账号或登录状态已变化，请重新选择并重新生成草稿。'
+            : '操作已失效或登录状态无法确认，本次未提交。';
+        }
+        handleVerificationFailure(verification, verification.status === 'identity-changed'
+          ? '账号或登录状态已变化，请重新选择'
+          : '登录状态暂时无法确认，草稿未提交，请重新登录后再试');
+        return;
+      }
+      if (!isOperationStillValid(ticket)) {
+        setDraftBusy(false);
+        showNotice('操作已失效或面板已关闭，本次未提交');
+        return;
+      }
+      let res;
+      try {
+        res = await request(`/companion/drafts/${encodeURIComponent(id)}/confirm`, {
+          method: 'POST',
+          silent401: true,
+          body: { text },
+        });
+      } catch (e) {
+        res = { code: -1, msg: '网络不太好，请稍后再试' };
+      }
+
+      if (!isOperationStillValid(ticket)) return;
+
+      if (res && res.code === -1) {
+        status.textContent = '结果暂时不确定，正在用同一草稿核对…';
+        res = await resolveUnknownDraft(id, text, ticket);
+      }
+
+      if (!isOperationStillValid(ticket) || (res && res.code === -2)) return;
+
+      if (!res || res.code !== 0) {
+        const info = mapDraftError(res);
+        appendCare(responseCare(res));
+        status.className = 'cc-error';
+        status.textContent = info.message;
+        if (info.terminal) state.draftStatus = info.terminal;
+        setDraftBusy(false);
+        if (info.needsPrepare) {
+          const actions = element('div', 'cc-actions');
+          const reprepare = button('换日期重新准备', 'cc-secondary');
+          reprepare.onclick = () => { state.draft = null; renderDraftSelection(); };
+          actions.appendChild(reprepare);
+          panelBodyEl.appendChild(actions);
+        }
+        return;
+      }
+      renderConfirmSuccess(res.data, responseCare(res));
+    }
+
+    async function resolveUnknownDraft(id, text, ticket) {
+      let retry;
+      try {
+        retry = await request(`/companion/drafts/${encodeURIComponent(id)}/confirm`, {
+          method: 'POST',
+          silent401: true,
+          body: { text },
+        });
+      } catch (e) {
+        retry = { code: -1, msg: '仍无法确认结果，请稍后再试' };
+      }
+      if (!isOperationStillValid(ticket)) return { code: -2 };
+      if (retry && retry.code === 0) return retry;
+      if (retry && retry.code !== -1 && retry.code !== undefined) return retry;
+
+      let res;
+      try { res = await request(`/companion/drafts/${encodeURIComponent(id)}`, { silent401: true }); }
+      catch (e) { return { code: -1, msg: '仍无法确认结果，请稍后再试' }; }
+      if (!isOperationStillValid(ticket)) return { code: -2 };
+      if (!res || res.code !== 0) return res;
+      const draft = res.data && res.data.draft;
+      if (!draft) return { code: 40400, msg: '草稿不存在' };
+      if (draft.status === 'confirmed') {
+        return { code: -3, msg: '服务端已确认，但详情尚未返回；请用同一草稿重试确认以获取日记编号和链接。', recoverable: true };
+      }
+      if (draft.status === 'cancelled') return { code: 40900, msg: '草稿已取消' };
+      if (draft.status === 'expired') return { code: 41000, msg: '草稿已过期' };
+      return { code: -1, msg: '服务端仍在处理，请稍后重试确认' };
+    }
+
+    async function cancelDraft(buttonEl, status) {
+      if (!state.draft || state.draftBusy) return;
+      if (state.draftStatus !== 'pending') {
+        status.className = 'cc-error';
+        status.textContent = state.draftStatus === 'cancelled'
+          ? '草稿已取消；取消草稿不会删除日记。'
+          : '草稿已确认，不能取消；已保存的日记不会被删除。';
+        setDraftBusy(false);
+        return;
+      }
+      const id = state.draft.id;
+      const panel = panelEpoch;
+      const op = ++draftEpoch;
+      const bound = state.draftOwner;
+      const ticket = createVerificationTicket('cancel', {
+        uid: bound ? bound.uid : (currentUid() || state.uid),
+        identityEpoch: bound ? bound.identityEpoch : state.identityEpoch,
+        opSeq: op,
+        panelEpoch: panel,
+        draftId: id,
+      });
+      setDraftBusy(true);
+      status.className = 'cc-muted';
+      status.textContent = '正在取消草稿…';
+      const verification = await verifyIdentity(ticket);
+      if (verification.status !== 'valid-same-account') {
+        setDraftBusy(false);
+        if (panelEl && !panelEl.hidden && panel === panelEpoch) {
+          status.className = 'cc-error';
+          status.textContent = verification.status === 'identity-changed'
+            ? '账号或登录状态已变化，请重新选择。'
+            : '操作已失效或登录状态无法确认，本次未取消。';
+        }
+        handleVerificationFailure(verification, verification.status === 'identity-changed'
+          ? '账号或登录状态已变化，请重新选择'
+          : '登录状态暂时无法确认，草稿未取消，请重新登录后再试');
+        return;
+      }
+      if (!isOperationStillValid(ticket)) {
+        setDraftBusy(false);
+        showNotice('操作已失效或面板已关闭，本次未取消');
+        return;
+      }
+      let res;
+      try {
+        res = await request(`/companion/drafts/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          silent401: true,
+        });
+      } catch (e) {
+        res = { code: -1, msg: '网络不太好，请稍后再试' };
+      }
+      if (!isOperationStillValid(ticket)) return;
+      if (!res || res.code !== 0) {
+        const info = mapDraftError(res);
+        if (info.terminal) state.draftStatus = info.terminal;
+        status.className = 'cc-error';
+        status.textContent = info.terminal === 'confirmed'
+          ? '草稿已确认，不能取消；已保存的日记不会被删除。'
+          : info.message;
+        appendCare(responseCare(res));
+        setDraftBusy(false);
+        return;
+      }
+      state.draftStatus = 'cancelled';
+      status.className = 'cc-note';
+      status.textContent = '草稿已取消；取消草稿不会删除日记。如需请返回重新准备。';
+      setDraftBusy(false);
+    }
+
+    function classifySession() {
+      const token = getToken();
+      const uid = currentUid();
+      if (token && uid) return 'signed-in';
+      if (!token && (state.accountBound || hasLegacyContext())) return 'signed-out-with-context';
+      return 'guest';
+    }
+
+    function hasLegacyContext() {
+      return Boolean(
+        state.uid || state.token || state.mode === 'saved' ||
+        state.draft || state.memorySnapshot || state.historyItems.length
+      );
+    }
+
+    function isolateSignedOutContext(reason) {
+      modeEpoch += 1;
+      panelEpoch += 1;
+      draftEpoch += 1;
+      restoreSeq += 1;
+      state.identityEpoch += 1;
+      state.clearEpoch += 1;
+      state.readSeq += 1;
+      if (state.session) {
+        state.session.invalidate();
+        state.session.reset();
+      }
+      state.session = createTemporary(request);
+      state.mode = 'temporary';
+      state.uid = '';
+      state.token = '';
+      state.accountBound = false;
+      state.sending = false;
+      state.activeSend = null;
+      if (sendEl) sendEl.disabled = false;
+      state.turns = [];
+      state.historyItems = [];
+      state.historyPage = 1;
+      state.historyHasMore = false;
+      state.draft = null;
+      state.draftTrace = [];
+      state.draftProvider = '';
+      state.draftInclude = false;
+      state.draftBusy = false;
+      state.draftStatus = '';
+      state.draftMaterial = null;
+      state.draftOwner = null;
+      state.stoppedRound = 0;
+      state.panelKind = '';
+      state.memorySnapshot = null;
+      activeDraftControls = null;
+      chatEl.replaceChildren();
+      if (careEl) { careEl.hidden = true; careEl.replaceChildren(); }
+      if (panelEl) panelEl.hidden = true;
+      if (panelBodyEl) panelBodyEl.replaceChildren();
+      if (inputEl) inputEl.value = '';
+      if (saveToggleEl) saveToggleEl.checked = false;
+      updateModeUi();
+      const notice = reason === 'restore-failed'
+        ? '登录状态暂时无法确认，已回到临时对话'
+        : '登录状态已失效，已转为临时对话；本次不保存';
+      showNotice(notice);
+      addBubble(notice, 'ai', false);
+    }
+
+    function requireSignedInFor(feature) {
+      const classification = classifySession();
+      if (classification === 'signed-out-with-context') {
+        isolateSignedOutContext('removed');
+        return false;
+      }
+      if (classification !== 'signed-in') {
+        showNotice(feature === 'history' ? '登录后才能查看历史对话'
+          : feature === 'memory' ? '登录后才能查看记忆'
+            : feature === 'clear' ? '登录后才能清除记录'
+              : '登录后才能生成草稿');
+        return false;
+      }
+      return true;
+    }
+
+    function beginSend() {
+      if (state.activeSend) return null;
+      const text = inputEl.value.trim();
+      const owner = {
+        id: ++state.sendSeq,
+        uid: state.uid || currentUid(),
+        identityEpoch: state.identityEpoch,
+        session: state.session,
+        sessionGen: state.session.generation,
+        text,
+        typingEl: null,
+        committed: false,
+      };
+      state.activeSend = owner;
+      state.sending = true;
+      if (sendEl) sendEl.disabled = true;
+      return owner;
+    }
+
+    function isSendCurrent(owner) {
+      if (!owner || state.activeSend !== owner) return false;
+      if (state.session !== owner.session) return false;
+      if (owner.session.isStale(owner.sessionGen)) return false;
+      if (owner.identityEpoch !== state.identityEpoch) return false;
+      const uid = currentUid();
+      if (uid && owner.uid && uid !== owner.uid) return false;
+      return true;
+    }
+
+    function settleSend(owner) {
+      if (!owner) return;
+      if (owner.typingEl) {
+        owner.typingEl.remove();
+        owner.typingEl = null;
+      }
+      if (state.activeSend !== owner) return;
+      state.activeSend = null;
+      state.sending = false;
+      if (sendEl) sendEl.disabled = false;
+      inputEl.focus();
+    }
+
+    async function deliverSend(owner) {
+      if (!isSendCurrent(owner)) return;
+      if (inputEl.value.trim() !== owner.text) {
+        settleSend(owner);
+        return;
+      }
+      owner.committed = true;
+      inputEl.value = '';
+      addBubble(owner.text, 'me');
+      owner.typingEl = addBubble('正在回应…', 'typing', false);
+      try {
+        const data = await owner.session.send(owner.text);
+        if (!isSendCurrent(owner)) return;
+        addBubble(data.reply.content, 'ai');
+        showCare(data.care);
+        showProvider(data.provider, data.degraded, false);
+        if (state.mode === 'saved') {
+          showNotice(data.saved ? '已保存到本人账号' : '本次未保存');
+        } else if (!state.accountBound && !state.token) {
+          showNotice('本次未保存；临时对话刷新后清空');
+        }
+      } catch (error) {
+        if (!isSendCurrent(owner)) return;
+        showCare(error.care);
+        if (error.code === 40100) {
+          isolateSignedOutContext('backend40100');
+          return;
+        }
+        addBubble(error.message, 'ai', false);
+        if (!inputEl.value && state.activeSend === owner) inputEl.value = owner.text;
+      } finally {
+        settleSend(owner);
+      }
+    }
+
+    async function sendMessage() {
+      if (state.sending || state.activeSend) return;
+      const text = inputEl.value.trim();
+      if (!text) return;
+      if (text.length > MAX_MESSAGE) {
+        setStatus('一次最多 2000 字，可以分开说。');
+        return;
+      }
+      const owner = beginSend();
+      if (!owner) return;
+      try {
+        const classification = classifySession();
+        if (classification === 'signed-out-with-context') {
+          isolateSignedOutContext('removed');
+          settleSend(owner);
+          return;
+        }
+        if (classification === 'guest') {
+          await deliverSend(owner);
+          return;
+        }
+        const ticket = createVerificationTicket('send', {
+          uid: owner.uid,
+          identityEpoch: owner.identityEpoch,
+          opSeq: owner.id,
+          sessionGen: owner.sessionGen,
+          session: owner.session,
+          text: owner.text,
+        });
+        const verification = await verifyIdentity(ticket);
+        if (verification.status !== 'valid-same-account') {
+          settleSend(owner);
+          handleVerificationFailure(verification, verification.status === 'identity-changed'
+            ? '账号或登录状态已变化，请确认后重新发送'
+            : undefined);
+          return;
+        }
+        if (!isOperationStillValid(ticket)) {
+          settleSend(owner);
+          showNotice('操作已失效，本次未发送');
+          return;
+        }
+        await deliverSend(owner);
+      } catch (e) {
+        settleSend(owner);
+      }
+    }
+
+    async function enableSaved(intent) {
+      const tokenAtStart = getToken();
+      if (!tokenAtStart) {
+        if (intent === modeEpoch) {
+          if (saveToggleEl) saveToggleEl.checked = false;
+          showNotice('登录后才能保存对话记忆');
+        }
+        return;
+      }
+      const me = await fetchMe();
+      if (intent !== modeEpoch) return;
+      if (!me.ok) {
+        if (intent === modeEpoch) {
+          if (saveToggleEl) saveToggleEl.checked = false;
+          isolateSignedOutContext('auth401');
+        }
+        return;
+      }
+      if (getToken() !== tokenAtStart || (state.uid && state.uid !== me.uid)) {
+        if (intent === modeEpoch) switchAccount(me.uid, '检测到账号变化，请重新选择是否保存');
+        return;
+      }
+      state.uid = me.uid;
+      state.token = getToken();
+      if (typeof GLOBAL.setUser === 'function') GLOBAL.setUser(me.user);
+      if (!saveToggleEl || !saveToggleEl.checked) return;
+      writeSaveMode(state.uid, true);
+      replaceSession('saved');
+      showNotice('已开启保存；之后的对话会存到本人账号');
+      try {
+        await loadHistory(true, true);
+      } catch (e) {
+        showNotice(e.message || '历史暂时加载失败');
+      }
+    }
+
+    function disableSaved(intent) {
+      if (intent !== modeEpoch) return;
+      if (state.uid) writeSaveMode(state.uid, false);
+      replaceSession('temporary');
+      showNotice('已关闭保存；已存记录不会被删除');
+    }
+
+    sendEl.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {
+        event.preventDefault();
+        if (!state.sending) sendMessage();
+      }
+    });
+
+    if (saveToggleEl) {
+      saveToggleEl.addEventListener('change', () => {
+        const intent = ++modeEpoch;
+        if (saveToggleEl.checked) enableSaved(intent);
+        else disableSaved(intent);
+      });
+    }
+
+    if (toolsEl) {
+      toolsEl.addEventListener('click', event => {
+        const target = event.target.closest('[data-cc-action]');
+        if (!target) return;
+        const action = target.getAttribute('data-cc-action');
+        if (action === 'history') openHistoryPanel();
+        else if (action === 'memory') openMemoryPanel();
+        else if (action === 'clear') openClearPanel();
+        else if (action === 'draft') {
+          const kind = classifySession();
+          if (kind === 'signed-out-with-context') isolateSignedOutContext('removed');
+          if (classifySession() !== 'signed-in') {
+            if (openPanel('整理成私密日记', 'draft')) appendMessage('登录后才能生成草稿。', 'cc-muted');
+          } else if (openPanel('整理成私密日记', 'draft')) renderDraftSelection();
+        }
+      });
+    }
+
+    if (panelCloseEl) panelCloseEl.addEventListener('click', closePanel);
+    if (panelEl) {
+      panelEl.addEventListener('click', event => { if (event.target === panelEl) closePanel(); });
+    }
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && panelEl && !panelEl.hidden) closePanel();
+    });
+
+    const storedUser = getStoredUser();
+    state.uid = readUserId(storedUser);
+    state.token = getToken();
+    updateModeUi();
+    addBubble('今天想从哪件小事说起？你可以慢慢说。', 'ai', false);
+
+    request('/ai/status', { silent401: true }).then(res => {
+      if (res && res.code === 0) showProvider(res.data, false, true);
+      else setStatus((res && res.msg) || '暂时无法读取服务状态');
+    }).catch(() => setStatus('暂时无法连接服务'));
+
+    if (typeof GLOBAL.addEventListener === 'function') {
+      GLOBAL.addEventListener('storage', event => {
+        if (event && event.key !== null && event.key !== 'wg_token' && event.key !== 'wg_user') return;
+        const token = getToken();
+        const nextUid = currentUid();
+        if (!token) {
+          if (state.accountBound || hasLegacyContext()) isolateSignedOutContext('removed');
+          return;
+        }
+        if (!nextUid) {
+          isolateSignedOutContext('removed');
+          return;
+        }
+        if (nextUid !== state.uid) {
+          switchAccount(nextUid, '检测到账号变化，已回到临时对话');
+        }
+      });
+    }
+
+    state.accountBound = Boolean(state.uid && state.token);
+    if (state.uid && state.token && readSaveMode(state.uid) === 'on') {
+      restoreSavedForAccount(state.uid).catch(() => {});
+    }
+
+    return { state, closePanel, prepareDraft, confirmDraft, cancelDraft, renderDraftPreview, renderDraftSelection };
+  }
+
+  return {
+    mountChatCompanion,
+    readUserId,
+    saveModeKey,
+    readSaveMode,
+    writeSaveMode,
+    localDateKey,
+    isValidDateKey,
+    buildDraftMaterial,
+    draftTextIssue,
+    mergeHistoryPages,
+    mapDraftError,
+    isSafeDiaryUrl,
+    providerText,
+  };
+});

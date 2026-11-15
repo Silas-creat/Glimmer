@@ -1,0 +1,36 @@
+COMMAND=node --test docs/review/2026-11-13-codearts-repair-check/B-extra-checks.test.mjs
+SEMANTICS=退出 0 表示缺陷存在；退出非 0 表示原断言未被满足（修复后缺陷不再复现）。本日志只作边界变化证据，不作通过依据。
+
+✔ B2 close/reopen discards pending confirm and prepare responses (6.733ms)
+✔ B3 confirm busy disables cancel/back/edit and prevents cancel API (2.3181ms)
+✔ B1 two missing confirm responses can recover later using same id (2.1559ms)
+✖ B4 REMAINING: crisis result leaves enabled generation button and repeats prepare (2.0545ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 103.9284
+
+✖ failing tests:
+
+test at docs\review\2026-11-13-codearts-repair-check\B-extra-checks.test.mjs:159:1
+✖ B4 REMAINING: crisis result leaves enabled generation button and repeats prepare (2.0545ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///D:/%E5%BE%AE%E5%85%89%E5%90%8C%E8%A1%8C/Glimmer/docs/review/2026-11-13-codearts-repair-check/B-extra-checks.test.mjs:166:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+EXIT_CODE=1

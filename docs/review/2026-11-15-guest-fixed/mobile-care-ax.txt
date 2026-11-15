@@ -1,0 +1,15 @@
+Browser tab: 3, Title: "393×852 本地响应式验收", URL: "http://127.0.0.1:8081/qa-responsive-20261115.html".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 32-35, 42-45, 47-48, 52-61
++				42 text 看到你现在可能很难受。先陪你停在这里；如果有立即伤害自己的危险，请联系身边可信任的人或当地急救服务。也可以联系这些援助热线。
++				43 link Description: 全国24小时心理援助热线：12356, Value: tel:12356
++				44 link Description: 北京心理危机研究与干预中心：010-82951332, Value: tel:010-82951332
++				45 link Description: 希望24热线：400-161-9995, Value: tel:400-161-9995
+~					46 text 已停止生成。先照顾好自己，这里暂不保存日记。
++					47 text 看到你现在可能很难受。先陪你停在这里；如果有立即伤害自己的危险，请联系身边可信任的人或当地急救服务。也可以联系这些援助热线。
++					48 link Description: 全国24小时心理援助热线：12356, Value: tel:12356
++					49 link Description: 北京心理危机研究与干预中心：010-82951332, Value: tel:010-82951332
+~					50 link Description: 希望24热线：400-161-9995, Value: tel:400-161-9995
+~					51 button 关闭
++					52 button 返回聊天
+The focused UI element is 4 AXWebArea 微光同行, URL: 127.0.0.1:8081/chat.html
