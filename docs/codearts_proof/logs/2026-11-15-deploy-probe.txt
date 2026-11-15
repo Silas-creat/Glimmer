@@ -1,0 +1,67 @@
+COMMAND=node scripts/smoke-test.js（在检查器探针副本）
+PROBE_DIR=D:/微光同行/_deploy_repro/checker-probe
+SYNTHETIC_KEY=sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ123456（仅探针，验证后已删除）
+
+[probe-clean] EXIT_CODE=0
+通过 131   警告 0   失败 0
+js 里挂载
+  ✅ 路由 companion 已在 app.js 里挂载
+  ✅ 路由 compat 已在 app.js 里挂载
+  ✅ 路由 diary 已在 app.js 里挂载
+  ✅ 路由 discover 已在 app.js 里挂载
+  ✅ 路由 group 已在 app.js 里挂载
+  ✅ 路由 interact 已在 app.js 里挂载
+  ✅ 路由 logs 已在 app.js 里挂载
+  ✅ 路由 message 已在 app.js 里挂载
+  ✅ 路由 user 已在 app.js 里挂载
+
+==============================================
+  通过 131   警告 0   失败 0
+==============================================
+
+🎉 全部检查通过，可以开始部署了。
+
+
+
+---
+[probe-with-synthetic-key] EXIT_CODE=1
+通过 130   警告 0   失败 1
+s 里挂载
+  ✅ 路由 diary 已在 app.js 里挂载
+  ✅ 路由 discover 已在 app.js 里挂载
+  ✅ 路由 group 已在 app.js 里挂载
+  ✅ 路由 interact 已在 app.js 里挂载
+  ✅ 路由 logs 已在 app.js 里挂载
+  ✅ 路由 message 已在 app.js 里挂载
+  ✅ 路由 user 已在 app.js 里挂载
+
+==============================================
+  通过 130   警告 0   失败 1
+==============================================
+
+必须修掉的问题：
+  1. ★ 前端目录里没有明文 API Key（这条最重要）: api.js 里有明文的 DeepSeek Key（连注释里的也要删掉）
+
+
+
+---
+[probe-restored] EXIT_CODE=0
+通过 131   警告 0   失败 0
+js 里挂载
+  ✅ 路由 companion 已在 app.js 里挂载
+  ✅ 路由 compat 已在 app.js 里挂载
+  ✅ 路由 diary 已在 app.js 里挂载
+  ✅ 路由 discover 已在 app.js 里挂载
+  ✅ 路由 group 已在 app.js 里挂载
+  ✅ 路由 interact 已在 app.js 里挂载
+  ✅ 路由 logs 已在 app.js 里挂载
+  ✅ 路由 message 已在 app.js 里挂载
+  ✅ 路由 user 已在 app.js 里挂载
+
+==============================================
+  通过 131   警告 0   失败 0
+==============================================
+
+🎉 全部检查通过，可以开始部署了。
+
+

@@ -1,0 +1,13 @@
+{
+  "checkedFiles": 136,
+  "credentialPatternMatches": 0,
+  "localLinks": 176,
+  "brokenLinks": 0,
+  "temporaryDirectoryRemoved": true,
+  "hashes": {
+    "setup/install.js": "0248cb10d15684b61061ccc5dbf22cd0271d1e1098f6f80144369da04d5eba6e",
+    "setup/start.js": "7d5e5b1ee187097fe900b4fb45734c156af1c0384b27411d44ece1a2f67934f3",
+    "后端源码/.env": "241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a",
+    "前端参考/chat-companion.js": "31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270"
+  }
+}

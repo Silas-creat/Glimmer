@@ -9,10 +9,10 @@ npm install
 cp .env.example .env      # 改里面的 DB_PASSWORD
 node scripts/init-db.js   # 建库建表
 node scripts/seed-demo.js # 灌演示数据（可选）
-node src/app.js           # 起在 3000
+node src/app.js           # 默认 3000；以 后端源码/.env 的 PORT 为准
 ```
 
-健康检查：`http://127.0.0.1:3000/api/health`（会实际查一次数据库）。
+健康检查：`http://127.0.0.1:3000/api/health`（默认端口；若 `.env` 改了 `PORT`，以实际端口为准，会实际查一次数据库）。
 
 ## 跑测试
 

@@ -16,11 +16,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
 
-// 前端目录可以用命令行参数指定（默认是八稿）
-//   node scripts/check-frontend.js                 → 检查 前端八稿
-//   node scripts/check-frontend.js ".../九稿"      → 检查 九稿
-const FRONTEND = process.argv[2] || 'D:/Study/Match/2026-2027.up/chat/前端八稿';
+// 默认检查仓库内前端；可传目录以检查部署副本。
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const FRONTEND = path.resolve(process.argv[2] || path.join(ROOT, '..', '前端参考'));
+const API_FUNCTIONS = ['api', 'getToken', 'setToken', 'clearToken', 'getUser', 'setUser', 'requireLogin', 'apiBase'];
 
 let pass = 0, fail = 0, warn = 0;
 const problems = [];
@@ -35,6 +36,10 @@ if (!fs.existsSync(FRONTEND)) {
 }
 
 const htmlFiles = fs.readdirSync(FRONTEND).filter(f => f.endsWith('.html')).sort();
+if (htmlFiles.length === 0) {
+  console.error('前端目录没有 HTML 页面，检查失败');
+  process.exit(1);
+}
 
 console.log('==============================================');
 console.log('  前端 HTML 内联脚本检查');
@@ -43,13 +48,8 @@ console.log('  共 ' + htmlFiles.length + ' 个 html 文件');
 console.log('==============================================');
 
 // ============================================================
-//  加载 api.js，拿到【真实的】API 对象结构
-//
-//  一开始我用正则去猜方法名，结果漏掉了 toast、handleError、
-//  requireLogin 这些（它们在对象字面量里以 `toast: toast,` 这种
-//  简写形式出现，正则匹配不到），导致误报一堆"方法不存在"。
-//  检查器不准比没有更糟 —— 所以改成直接把 api.js 跑在沙箱里，
-//  然后 Reflect.ownKeys 内省真实的键，这才是唯一可靠的来源。
+//  在不发网络请求的 VM 中加载 api.js，检查当前全局函数契约。
+//  页面若残留旧 API.xxx 调用，也必须能在实际 API 对象上找到函数。
 // ============================================================
 function loadApiObject() {
   const src = fs.readFileSync(path.join(FRONTEND, 'api.js'), 'utf8');
@@ -60,7 +60,7 @@ function loadApiObject() {
     fetch: () => Promise.reject(new Error('检查阶段不发请求')),
     console, setTimeout, clearTimeout, setInterval, clearInterval,
     URLSearchParams,
-    location: { href: '', pathname: 'x.html', search: '' },
+    location: { href: 'http://checker.invalid/x.html', pathname: '/x.html', search: '', protocol: 'http:', origin: 'http://checker.invalid' },
     document: {
       getElementById: () => null,
       createElement: () => ({ style: {} }),
@@ -70,8 +70,8 @@ function loadApiObject() {
   sandbox.window = sandbox;
 
   const ctx = vm.createContext(sandbox);
-  new vm.Script(src, { filename: 'api.js' }).runInContext(ctx);
-  return ctx.API;
+  new vm.Script(src, { filename: 'api.js' }).runInContext(ctx, { timeout: 1000 });
+  return ctx;
 }
 
 /** 递归收集 API 对象上所有可调用的路径，如 auth.isLoggedIn */
@@ -81,7 +81,7 @@ function collectApiPaths(obj, prefix, out) {
     if (typeof key !== 'string') continue;
     const val = obj[key];
     const full = prefix ? prefix + '.' + key : key;
-    out.add(full);
+    if (typeof val === 'function') out.add(full);
     if (val && typeof val === 'object') {
       collectApiPaths(val, full, out);
     }
@@ -89,10 +89,17 @@ function collectApiPaths(obj, prefix, out) {
   return out;
 }
 
-const apiObject = loadApiObject();
-const apiPaths = collectApiPaths(apiObject);
-// 顶层方法名也放进一个集合，方便判断 API.xxx 这种调用
-const apiTopLevel = new Set(Object.keys(apiObject));
+let apiContext = {};
+try {
+  apiContext = loadApiObject();
+  // 当前 api.js 使用全局函数，不再导出旧版 window.API 对象。
+  const missing = API_FUNCTIONS.filter(name => typeof apiContext[name] !== 'function');
+  if (missing.length) bad('api.js 函数契约缺失: ' + missing.join(', '));
+  else ok('api.js 函数契约完整（' + API_FUNCTIONS.join(', ') + '）');
+} catch (e) {
+  bad('api.js 加载失败: ' + e.message);
+}
+const apiPaths = apiContext.API ? collectApiPaths(apiContext.API) : new Set();
 
 // ============================================================
 //  逐个文件检查
@@ -139,24 +146,34 @@ for (const file of htmlFiles) {
   }
 
   // ---- 4. 检查引用的外链脚本文件是否存在 ----
+  const pageScripts = [...inlineScripts];
   for (const s of html.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/g)) {
     const src = s[1];
     if (/^https?:/.test(src)) continue;
     if (fs.existsSync(path.join(FRONTEND, src))) {
       ok(`引用的 ${src} 文件存在`);
+      try {
+        const code = fs.readFileSync(path.join(FRONTEND, src), 'utf8');
+        new vm.Script(code, { filename: src });
+        pageScripts.push(code);
+        ok(`引用的 ${src} 语法正确`);
+      } catch (e) {
+        bad(`${file} 引用的 ${src} 语法错误: ${e.message}`);
+      }
     } else {
       bad(`${file} 引用了不存在的文件: ${src}`);
     }
   }
 
   // ---- 5. 检查 API 调用是否真实存在 ----
+  const pageCode = pageScripts.join('\n');
   // 先把页面里所有 API.xxx( 和 API.xxx.yyy( 抠出来
   const apiCalls = new Set();
-  for (const c of html.matchAll(/API\.(\w+)\.(\w+)\s*\(/g)) {
+  for (const c of pageCode.matchAll(/API\.(\w+)\.(\w+)\s*\(/g)) {
     apiCalls.add(`${c[1]}.${c[2]}`);
   }
   // API.xxx( 但要排除掉已经被上一条匹配过的（即后面有 .yyy 的）
-  for (const c of html.matchAll(/API\.(\w+)\s*\(/g)) {
+  for (const c of pageCode.matchAll(/API\.(\w+)\s*\(/g)) {
     const name = c[1];
     apiCalls.add(name);
   }
@@ -164,11 +181,7 @@ for (const file of htmlFiles) {
     const unknown = [];
     for (const call of apiCalls) {
       // 用内省出来的真实路径判断
-      if (call.includes('.')) {
-        if (!apiPaths.has(call)) unknown.push(call);
-      } else {
-        if (!apiTopLevel.has(call)) unknown.push(call);
-      }
+      if (!apiPaths.has(call)) unknown.push(call);
     }
     if (unknown.length === 0) {
       ok(`调用的 API 方法都存在（${[...apiCalls].join(', ')}）`);
@@ -178,10 +191,16 @@ for (const file of htmlFiles) {
   }
 
   // ---- 6. 是否已接入后端 ----
-  const usesApi = /API\./.test(html);
+  const usesApi = /API\./.test(html) || API_FUNCTIONS.some(name => new RegExp(`\\b${name}\\s*\\(`).test(pageCode));
   const hasApiScript = /src\s*=\s*["']api\.js["']/.test(html);
   if (usesApi && !hasApiScript) {
-    bad(`${file} 用了 API.xxx 但没引入 api.js`);
+    // 通用 session guard 会在缺少 api 时立即返回，不是强制依赖。
+    const guardedCode = pageCode.replace(/if\s*\(\s*typeof api\s*!==\s*['"]function['"]\s*\)\s*return\s*;(?:\s|\/\/[^\n]*\n)*try\s*\{\s*api\([^;]*\);/g, '');
+    const onlyOptionalApi = !/API\./.test(pageCode)
+      && !API_FUNCTIONS.filter(name => name !== 'api').some(name => new RegExp(`\\b${name}\\s*\\(`).test(pageCode))
+      && guardedCode !== pageCode && !/\bapi\s*\(/.test(guardedCode);
+    if (onlyOptionalApi) warnIt(`${file} 未引入 api.js；仅有带 typeof 保护的可选 API 调用，不能据此视为已接入后端`);
+    else bad(`${file} 使用了 API 函数但没引入 api.js`);
   }
 }
 

@@ -1,0 +1,9 @@
+{
+  "setup/start.js": "7d5e5b1ee187097fe900b4fb45734c156af1c0384b27411d44ece1a2f67934f3",
+  "setup/start.test.js": "e6e145d9144f82b6c8bcbde1df65defaf7347ada4c897ca6099b879675241a52",
+  "后端源码/scripts/smoke-test.js": "22899e6f178284ad664be338f1ab543e43637c274b9ca31a4d7e43700fbfc4a5",
+  "后端源码/scripts/check-frontend.js": "d021b70ea611715bf95cdc4b5c838ab6ec7655fc07e396d012c494212fe4dce5",
+  "后端源码/scripts/check-pages-runtime.js": "a2a1af26390bbaa16c927f6d97e12f27aeecd66796cdf42d1f7f3835cbff4f6b",
+  "后端源码/scripts/test-deploy-checkers.test.js": "b024b641ee0d90511fa53cbd0ac813fd9f2e7497ef84f77a528311baaec6fdcb",
+  ".gitattributes": "2ba37c3dff737c4fd0a56c2e3cfdc74513d045926c03ad7ded0a0d7de92493a7"
+}

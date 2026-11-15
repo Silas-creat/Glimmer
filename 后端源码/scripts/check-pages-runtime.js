@@ -1,39 +1,75 @@
 // ============================================================
 //  页面运行时检查：用假 DOM 在 Node 里真跑一遍每个页面的脚本
 //
-//  用法：  node scripts/check-pages-runtime.js <前端目录>
+//  用法：node scripts/check-pages-runtime.js [前端目录] --base http://127.0.0.1:3001 --phone <合成测试手机号> --code <验证码>
+//  会登录并执行页面初始化请求；必须显式指定隔离后端和测试账号。
 //
 //  ★ 为什么需要这个 ★
 //    check-frontend.js 只做"语法检查"和"API 方法是否存在"。
-//    它能保证"不会因为语法错而白屏"，但抓不到运行时的错，比如：
-//      · getElementById 返回 null 然后 .textContent = xxx
+//    它能检查脚本语法，但抓不到运行时的错，比如：
 //      · 调用一个不存在的函数
 //      · 顶层代码里访问了未定义的变量
 //    这些错误在浏览器里就是"页面卡住/空白"，而且只有打开页面才看得到。
 //
 //  ★ 怎么做的 ★
 //    造一个"什么都接受"的假 DOM（任何属性、任何方法调用都不报错），
-//    加上真实的 fetch（真的打后端），然后把页面里的内联脚本跑一遍。
-//    只要脚本没抛异常，就说明"至少能跑起来"。
+//    加上受限 fetch（只打指定后端），按 HTML 顺序执行本地与内联脚本。
 //
 //  ★ 它的局限（必须说清楚）★
 //    假 DOM 不会真的渲染，所以：
 //      · 拿不到"页面长得对不对"
 //      · 列表为空时，渲染循环不会执行，里面的 bug 抓不到
-//    它只回答一个问题：**这个页面的脚本能不能跑起来、不被异常打断**。
+//      · 缺少真实 DOM 元素和事件交互引起的错误可能被假 DOM 隐藏
+//    它只检查已执行的初始化路径，不能保证整个页面运行正确。
 //    真正的视觉和交互还是要人打开浏览器看。
 // ============================================================
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
 
-const FRONTEND = process.argv[2] || 'D:/Study/Match/2026-2027.up/chat/九稿';
-const BASE = process.argv[3] || 'http://127.0.0.1:3000';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+function parseOptions(args) {
+  const options = {};
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg.startsWith('--')) { positional.push(arg); continue; }
+    if (!['--base', '--phone', '--code'].includes(arg) || !args[i + 1] || args[i + 1].startsWith('--')) {
+      throw new Error('参数无效: ' + arg);
+    }
+    if (options[arg]) throw new Error('参数重复: ' + arg);
+    options[arg] = args[++i];
+  }
+  if (positional.length > 2 || (positional[1] && options['--base'])) throw new Error('后端地址只能指定一次');
+  const rawBase = options['--base'] || positional[1];
+  if (!rawBase || !options['--phone'] || !options['--code']) {
+    throw new Error('必须显式指定 --base、--phone 和 --code；请使用隔离测试后端与合成账号，不会自动登录现有 3000 实例');
+  }
+  const base = new URL(rawBase);
+  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash || base.pathname !== '/') {
+    throw new Error('--base 必须是无凭证、路径和查询参数的 HTTP(S) origin');
+  }
+  if (!/^1\d{10}$/.test(options['--phone']) || !/^\d{6}$/.test(options['--code'])) throw new Error('测试手机号或验证码格式不正确');
+  return { frontend: path.resolve(positional[0] || path.join(ROOT, '..', '前端参考')), base: base.origin, phone: options['--phone'], code: options['--code'] };
+}
+let options;
+try { options = parseOptions(process.argv.slice(2)); }
+catch (error) { console.error(error.message); process.exit(1); }
+const FRONTEND = options.frontend;
+const BASE = options.base;
+
+// 禁止跨 origin 和自动重定向，API 的默认端口 fallback 也不能触碰另一实例。
+async function targetFetch(input, init = {}) {
+  const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url, BASE);
+  if (url.origin !== BASE || url.username || url.password) throw new Error('已阻止访问非测试后端: ' + url.origin);
+  return fetch(url, { ...init, redirect: 'error', signal: AbortSignal.timeout(5000) });
+}
 
 // 预置的登录态（跑页面脚本前会真的登录一次拿 token）
 //
 // ★ 为什么必须预置 ★
-//   大多数页面开头有 `if (!API.requireLogin()) throw new Error('未登录')`。
+//   页面会通过 requireLogin() 或 getToken() 检查登录状态。
 //   假 localStorage 是空的 → 这些页面直接抛异常 → 全部被计为"失败"。
 //   但这不是页面坏了，是"没登录时的正常行为"。
 //   所以先真登录一次，把 token 放进假 localStorage，页面按已登录状态跑。
@@ -154,14 +190,24 @@ function makeStorage() {
 }
 
 // ------------------------------------------------------------
-//  抽取页面里的内联脚本
-//  只取 <script> 没有 src 的那些（有 src 的是外部文件，单独处理）
+//  按文档顺序抽取本地外链及内联脚本；远程脚本明确报未覆盖。
 // ------------------------------------------------------------
-function extractInlineScripts(html) {
+function extractPageScripts(html) {
   const out = [];
-  const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   let m;
-  while ((m = re.exec(html)) !== null) out.push(m[1]);
+  while ((m = re.exec(html)) !== null) {
+    const src = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(m[1]);
+    if (src) {
+      if (/^(?:https?:)?\/\//i.test(src[1])) throw new Error('假 DOM 检查不执行远程脚本: ' + src[1]);
+      const full = path.resolve(FRONTEND, src[1]);
+      const relative = path.relative(FRONTEND, full);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('脚本路径越出前端目录: ' + src[1]);
+      out.push({ name: src[1], code: fs.readFileSync(full, 'utf8') });
+    } else if (m[2].trim()) {
+      out.push({ name: 'inline' + (out.length + 1), code: m[2] });
+    }
+  }
   return out;
 }
 
@@ -172,12 +218,10 @@ async function runPage(file) {
   const full = path.join(FRONTEND, file);
   const html = fs.readFileSync(full, 'utf8');
 
-  const inline = extractInlineScripts(html);
-  if (inline.length === 0) return { file, skipped: true };
-
-  // 加载 api.js（页面里所有接口调用都要靠它）
-  const apiSrc = fs.readFileSync(path.join(FRONTEND, 'api.js'), 'utf8')
-    .replace(/var BASE = '[^']*';/, `var BASE = '${BASE}';`);
+  let scripts;
+  try { scripts = extractPageScripts(html); }
+  catch (error) { return { file, ok: false, error: error.message }; }
+  if (scripts.length === 0) return { file, skipped: true };
 
   const sandboxLocal = makeStorage();
   const sandboxSession = makeStorage();
@@ -185,9 +229,14 @@ async function runPage(file) {
 
   // 把真实登录态塞进去，让需要登录的页面能跑
   if (SEED_TOKEN) {
-    sandboxLocal.setItem('pz_token', SEED_TOKEN);
-    sandboxLocal.setItem('pz_user', JSON.stringify(SEED_USER));
+    sandboxLocal.setItem('wg_token', SEED_TOKEN);
+    sandboxLocal.setItem('wg_user', JSON.stringify(SEED_USER));
   }
+
+  const asyncErrors = [];
+  const pending = new Set();
+  const timers = new Set();
+  const captureError = error => asyncErrors.push(error instanceof Error ? error : new Error(String(error)));
 
   const sandbox = {
     console,
@@ -199,16 +248,33 @@ async function runPage(file) {
     //     setInterval → 返回假 id，永不执行（动画不影响检查）
     //     setTimeout  → 用真实定时器，但缩短延迟并 unref（不阻止退出）
     setTimeout: (fn, ms) => {
-      const t = setTimeout(fn, Math.min(Number(ms) || 0, 30));
+      const t = setTimeout(() => {
+        timers.delete(t);
+        try { Promise.resolve(fn()).catch(captureError); } catch (error) { captureError(error); }
+      }, Math.min(Number(ms) || 0, 30));
+      timers.add(t);
       if (t && typeof t.unref === 'function') t.unref();
       return t;
     },
-    clearTimeout,
+    clearTimeout: timer => { timers.delete(timer); clearTimeout(timer); },
     setInterval: () => 0,
     clearInterval: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
     Promise, Error, JSON, Math, Date, Number, String, Array, Object, RegExp,
     parseInt, parseFloat, isNaN, encodeURIComponent, decodeURIComponent,
-    fetch: globalThis.fetch,
+    fetch: (input, init) => {
+      const request = targetFetch(input, init).then(async response => {
+        // 等待响应体，不能只收到响应头就把初始化请求算作结束。
+        const body = await response.arrayBuffer();
+        return new Response([204, 205, 304].includes(response.status) ? null : body, {
+          status: response.status, statusText: response.statusText, headers: response.headers,
+        });
+      }).catch(error => { captureError(error); throw error; });
+      pending.add(request);
+      request.then(() => pending.delete(request), () => pending.delete(request));
+      return request;
+    },
     URLSearchParams,
     FormData: globalThis.FormData,
     Blob: globalThis.Blob,
@@ -219,7 +285,7 @@ async function runPage(file) {
     alert: () => {},
     confirm: () => true,
     prompt: () => '',
-    location: { href: '', pathname: file, search: '', replace: () => {} },
+    location: { href: BASE + '/' + file, pathname: '/' + file, search: '', protocol: new URL(BASE).protocol, origin: BASE, replace: () => {} },
     history: { length: 1, back: () => {}, pushState: () => {}, replaceState: () => {} },
     navigator: { userAgent: 'node-check' },
     localStorage: sandboxLocal,
@@ -232,15 +298,19 @@ async function runPage(file) {
 
   const ctx = vm.createContext(sandbox);
 
+  process.on('unhandledRejection', captureError);
   try {
-    new vm.Script(apiSrc, { filename: 'api.js' }).runInContext(ctx);
-
-    for (let i = 0; i < inline.length; i++) {
-      new vm.Script(inline[i], { filename: `${file}#script${i + 1}` }).runInContext(ctx);
+    for (const script of scripts) {
+      new vm.Script(script.code, { filename: `${file}#${script.name}` }).runInContext(ctx, { timeout: 1000 });
     }
 
-    // 给异步逻辑一点时间跑完（页面大多是 IIFE + await）
-    await new Promise(r => setTimeout(r, 120));
+    // 有界等待初始化请求；失败不能被页面的兜底逻辑吞掉后算通过。
+    const deadline = Date.now() + 6000;
+    do {
+      await new Promise(r => setTimeout(r, 120));
+    } while ((pending.size || timers.size) && Date.now() < deadline);
+    if (pending.size || timers.size) throw new Error('页面初始化超过 6 秒，检查未完成');
+    if (asyncErrors.length) throw asyncErrors[0];
 
     // 看看几个关键容器里到底有没有东西
     //   （不是所有页面都有这些 id，有才算）
@@ -254,9 +324,12 @@ async function runPage(file) {
       }
     }
 
-    return { file, ok: true, scripts: inline.length, render };
+    return { file, ok: true, scripts: scripts.length, render };
   } catch (e) {
     return { file, ok: false, error: e.message, stack: String(e.stack || '').split('\n').slice(0, 4).join('\n') };
+  } finally {
+    for (const timer of timers) clearTimeout(timer);
+    process.removeListener('unhandledRejection', captureError);
   }
 }
 
@@ -272,22 +345,22 @@ async function runPage(file) {
 
   // 先真登录一次，拿到 token —— 后面每个页面都按"已登录"跑
   try {
-    const res = await fetch(BASE + '/api/auth/login', {
+    const res = await targetFetch(BASE + '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '13800138000', code: '123456' }),
+      body: JSON.stringify({ phone: options.phone, code: options.code }),
     });
     const json = await res.json();
-    if (json.code === 0) {
+    if (res.ok && json.code === 0 && json.data?.token && json.data?.user) {
       SEED_TOKEN = json.data.token;
       SEED_USER = json.data.user;
-      console.log(`  已登录：${SEED_USER.nickname}（token 长度 ${SEED_TOKEN.length}）\n`);
+      console.log('  合成测试账号登录成功\n');
     } else {
-      console.log(`  ⚠️  登录失败：${json.msg}\n`);
-      console.log('     需要登录的页面会报"未登录"，这不算页面坏。\n');
+      throw new Error('测试账号登录失败（HTTP ' + res.status + '）');
     }
   } catch (e) {
-    console.log('  ⚠️  连不上后端：' + e.message + '\n');
+    console.error('  检查未执行：' + e.message + '\n');
+    process.exit(1);
   }
 
   let okCount = 0;
@@ -297,7 +370,7 @@ async function runPage(file) {
   for (const f of files) {
     const r = await runPage(f);
     if (r.skipped) {
-      console.log(`  \x1b[2m− ${f}（没有内联脚本）\x1b[0m`);
+      console.log(`  \x1b[2m− ${f}（没有脚本）\x1b[0m`);
       skipped.push(f);
     } else if (r.ok) {
       const detail = (r.render || [])
@@ -325,10 +398,9 @@ async function runPage(file) {
   console.log(`  跑通 ${okCount} 个页面，失败 ${failed.length} 个，跳过 ${skipped.length} 个`);
   console.log('==============================================');
 
-  if (failed.length === 0) {
-    console.log('\n  🎉 所有页面都能跑起来（没有运行时异常）\n');
-    console.log('  注意：这只证明"脚本不会崩"，不代表画面完美。');
-    console.log('        视觉和交互还是要人打开浏览器看。\n');
+  if (failed.length === 0 && okCount > 0) {
+    console.log('\n  已执行页面在假 DOM 下的初始化检查通过。\n');
+    console.log('  未执行事件交互、真实渲染或浏览器验收；不能据此宣称端到端通过。\n');
     process.exit(0);
   } else {
     console.log('\n  失败的页面：');

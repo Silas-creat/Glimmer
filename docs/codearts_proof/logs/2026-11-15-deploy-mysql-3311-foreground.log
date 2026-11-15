@@ -1,0 +1,7 @@
+COMMAND=mysqld --no-defaults ... --port=3311 (foreground 10s probe)
+CWD=D:\微光同行\Glimmer
+
+
+STATUS=null
+SIGNAL=SIGTERM
+ERROR=spawnSync D:/mysql/bin/mysqld.exe ETIMEDOUT

@@ -1,0 +1,29 @@
+✔ occupied configured backend is refused before any database operation (240.1405ms)
+✔ invalid configured ports fail explicitly before starting services (202.8953ms)
+✔ unreachable remote database never triggers local MySQL startup (201.6796ms)
+✔ migration failure stops before backend or frontend startup (295.046ms)
+✔ configured backend is proxied while api.js stays static and malformed paths are rejected (1289.1877ms)
+✔ unhealthy backend does not publish frontend readiness (1271.0221ms)
+✔ MySQL launch uses configured initialized directory and ignores global option files (204.9957ms)
+✔ missing initialized MySQL data directory is rejected without migration (203.1332ms)
+✔ frontend refuses an artifact containing API but no HTML pages (81.326ms)
+✔ 默认前端路径不依赖工作目录，函数契约不再 SKIP (101.5708ms)
+✔ 缺失函数、缺失 api.js 和无语法效力的外链脚本均失败 (223.7743ms)
+✔ 不存在的旧 API 方法及未引入函数依赖均失败 (232.5838ms)
+✔ 安全扫描：缺失目录、空目录、合成 Key、第三方直连均失败 (493.469ms)
+✔ runtime 无显式目标/账号时拒绝执行 (76.4774ms)
+✔ runtime 使用指定后端、wg 登录态及 HTML 顺序的外链脚本 (259.5143ms)
+✔ runtime 登录失败时不执行页面 (117.0894ms)
+✔ runtime 跨 origin 和重定向都不会访问第二个服务 (473.3657ms)
+✔ runtime 捕获异步异常，空目录不会误判通过 (368.2086ms)
+✔ runtime 等待慢响应体并支持取消定时器 (359.8693ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3990.3979
+
+EXIT_CODE=0

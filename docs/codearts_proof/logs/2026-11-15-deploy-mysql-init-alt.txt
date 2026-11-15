@@ -1,0 +1,6 @@
+COMMAND=mysqld --no-defaults --initialize-insecure --basedir=D:/mysql --datadir=D:/mysql/mysql-data-3311
+DATA_DIR=D:/mysql/mysql-data-3311
+STARTED_AT=2026-11-15T14:01:35.201Z
+
+
+EXIT_CODE=0

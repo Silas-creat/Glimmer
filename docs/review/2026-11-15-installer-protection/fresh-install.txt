@@ -1,0 +1,16 @@
+npm warn deprecated multer@1.4.5-lts.2: Multer 1.x is impacted by a number of vulnerabilities, which have been patched in 2.x. You should upgrade to the latest 2.x version.
+
+added 143 packages in 16s
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice
+独立实例归属已验证，随机凭证已保存到 .env（不打印）
+执行 scripts/init-db.js
+scripts/init-db.js 完成
+执行 scripts/migrate.js
+scripts/migrate.js 完成
+安装完成；双击一键启动，前端从 8080 开始尝试，以实际输出为准。
+
+EXIT_CODE=0

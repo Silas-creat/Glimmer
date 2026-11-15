@@ -1,0 +1,49 @@
+
+> peizhe-server@0.1.0 test:engineering
+> node --test ../setup/install.test.js ../setup/start.test.js scripts/test-deploy-checkers.test.js
+
+✔ --check does not install, start, connect, initialize, or write (5.8428ms)
+✔ invalid ports stop before every side effect (3.0249ms)
+✔ existing configuration cannot be replaced by private installation (3.1064ms)
+✔ existing configuration requires explicit existing-instance authorization (3.1255ms)
+✔ occupied explicit private port cannot trigger initialization or authentication (2.9227ms)
+✔ preexisting data directory is never initialized or assigned a password (3.5924ms)
+✔ foreign UUID aborts before ALTER USER and stops only owned process (6.9823ms)
+✔ fresh installation verifies UUID, sets password in memory, and persists exact instance (5.5939ms)
+✔ existing instance preserves config, respects actual user/host/name, and never changes auth (3.9568ms)
+✔ fresh install does not run destructive demo-data generator implicitly (5.9101ms)
+✔ authentication failure never guesses another password or discloses it (4.4518ms)
+✔ schema failure stops subsequent scripts and retains generated recovery config (6.8092ms)
+✔ invalid environment PORT fails before installing dependencies (3.2417ms)
+✔ paths with apostrophes are preserved exactly in generated config (5.545ms)
+✔ port mismatch aborts auth even if UUID matches (5.4287ms)
+✔ system database override is used consistently by verification and schema scripts (3.5273ms)
+✔ occupied configured backend is refused before any database operation (233.9042ms)
+✔ invalid configured ports fail explicitly before starting services (202.2571ms)
+✔ unreachable remote database never triggers local MySQL startup (201.5057ms)
+✔ migration failure stops before backend or frontend startup (281.771ms)
+✔ configured backend is proxied while api.js stays static and malformed paths are rejected (1275.2754ms)
+✔ unhealthy backend does not publish frontend readiness (1260.4066ms)
+✔ MySQL launch uses configured initialized directory and ignores global option files (202.6587ms)
+✔ missing initialized MySQL data directory is rejected without migration (202.6631ms)
+✔ frontend refuses an artifact containing API but no HTML pages (78.8465ms)
+✔ 默认前端路径不依赖工作目录，函数契约不再 SKIP (95.6267ms)
+✔ 缺失函数、缺失 api.js 和无语法效力的外链脚本均失败 (227.8191ms)
+✔ 不存在的旧 API 方法及未引入函数依赖均失败 (223.6048ms)
+✔ 安全扫描：缺失目录、空目录、合成 Key、第三方直连均失败 (445.4392ms)
+✔ runtime 无显式目标/账号时拒绝执行 (68.282ms)
+✔ runtime 使用指定后端、wg 登录态及 HTML 顺序的外链脚本 (260.0226ms)
+✔ runtime 登录失败时不执行页面 (100.3797ms)
+✔ runtime 跨 origin 和重定向都不会访问第二个服务 (457.1858ms)
+✔ runtime 捕获异步异常，空目录不会误判通过 (342.0276ms)
+✔ runtime 等待慢响应体并支持取消定时器 (373.8031ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3948.6187
+
+EXIT_CODE=0

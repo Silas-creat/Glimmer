@@ -1,0 +1,30 @@
+COMMAND=node scripts/init-db.js
+CWD=D:\微光同行\Glimmer\.deploy_repro\checkout-fixed\后端源码
+
+==============================================
+  「陪着」数据库初始化
+==============================================
+
+目标 MySQL : root@127.0.0.1:3311
+目标数据库 : peizhe_deploy_20261115
+
+✅ 已连上 MySQL，版本 8.4.13
+✅ 数据库 `peizhe_deploy_20261115` 已就绪
+✅ schema.sql 执行完成（23 条语句）
+✅ seed.sql 执行完成（2 条语句）
+
+----------------------------------------------
+共 23 张表：
+  ai_diary_drafts, ai_messages, ai_profiles, blessings, bottle_picks, bottles, chat_members, chat_messages, chat_rooms, comments, conversations, diaries, favorites, follows, friends, likes, messages, notifications, reports, sms_codes, user_profiles, users, view_logs
+
+群聊房间 4 个：
+  age        同龄群
+  interest   拾趣
+  province   同省群
+  zodiac     星迹
+----------------------------------------------
+
+🎉 数据库初始化完成！下一步：npm start 启动服务
+
+
+EXIT_CODE=0

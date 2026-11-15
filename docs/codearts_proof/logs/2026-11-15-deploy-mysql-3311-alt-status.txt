@@ -1,0 +1,4 @@
+PID=37144
+OPEN=true
+EXIT_CODE=null
+DATADIR=D:/mysql/mysql-data-3311

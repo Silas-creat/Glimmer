@@ -1,0 +1,3 @@
+.env 已存在，保持不变。需要建表/迁移时显式运行 node setup/install.js --use-existing；仅启动请使用一键启动。
+
+EXIT_CODE=0

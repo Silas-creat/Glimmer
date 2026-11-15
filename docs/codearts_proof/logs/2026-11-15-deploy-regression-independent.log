@@ -1,0 +1,18 @@
+COMMAND=node --test --test-timeout=5000 --test-reporter=spec docs/review/2026-11-15-identity-guest/acceptance-boundaries.test.cjs
+CWD=D:\微光同行\Glimmer\.deploy_repro\checkout-fixed
+STARTED_AT=2026-11-15T14:04:58.393Z
+
+✔ F1: late A verification after storage-switch must not submit A material with B credentials (7.5452ms)
+✔ G1: a guest can send three consecutive messages with unsaved page-local context (2.7666ms)
+✔ G2: a login-only tool must preserve legitimate guest conversation (1.4462ms)
+✔ G3: a guest may retry a failed request without the restored input being discarded (2.4184ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 89.1235
+
+EXIT_CODE=0

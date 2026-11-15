@@ -1,0 +1,2 @@
+# Keep executable shell scripts portable across Windows checkouts and Git archives.
+*.sh text eol=lf

@@ -1,0 +1,9 @@
+{
+  "baseline": "2112271db26b34a557719afc60a77b91557ee624",
+  "remoteBefore": "3086f720feaf03a9e6678ae53821e69bb8075ae7",
+  "files": {
+    "后端源码/.env": "241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a",
+    "前端参考/chat-companion.js": "31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270",
+    "后端源码/scripts/test-chat-companion-repair.test.js": "b08a6cfa336e021369f28b000a2e5ce288d3a45e2d14fe7f2ab3edb41ee371b7"
+  }
+}

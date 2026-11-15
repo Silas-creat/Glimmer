@@ -1,0 +1,6 @@
+COMMAND=mysql -h 127.0.0.1 -P 3311 -u root -e "ALTER USER root@localhost IDENTIFIED BY <redacted>"
+SCOPE=only the isolated 3311 instance
+
+ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1:3311' (10061)
+
+EXIT_CODE=1

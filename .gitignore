@@ -13,6 +13,10 @@ node_modules/
 *.log
 **/*.log
 .runtime/
+# Isolated deployment/install probes must never become deliverables.
+.deploy_repro/
+_deploy_repro/
+mysql-data*/
 
 # ---- 上传目录（运行时生成，保留占位文件）----
 后端源码/uploads/*

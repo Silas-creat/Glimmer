@@ -1,0 +1,14 @@
+✔ F1: late A verification after storage-switch must not submit A material with B credentials (5.7961ms)
+✔ G1: a guest can send three consecutive messages with unsaved page-local context (1.8132ms)
+✔ G2: a login-only tool must preserve legitimate guest conversation (1.3557ms)
+✔ G3: a guest may retry a failed request without the restored input being discarded (2.4471ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 85.4026
+
+EXIT_CODE=0

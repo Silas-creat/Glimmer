@@ -1,0 +1,3 @@
+PID=32032
+OPEN=true
+DATADIR=D:/mysql/mysql-data-3311

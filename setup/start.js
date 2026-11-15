@@ -6,8 +6,8 @@
 //      node setup/start.js --port 8081 --no-open
 //
 //  ★ 它做三件事 ★
-//    1. MySQL 没跑就拉起来
-//    2. 后端没跑就起（node src/app.js）
+//    1. 先拒绝已占用的后端端口，再启动已初始化的本地 MySQL
+//    2. 启动本目录后端（node src/app.js），数据库健康后继续
 //    3. 起一个静态服务托管 前端参考/，并把 /api、/uploads 转发给后端
 //
 //  ★ 端口被占用会自动往后找 ★
@@ -28,40 +28,62 @@ const PKG_ROOT = path.resolve(__dirname, '..');
 const SERVER_DIR = path.join(PKG_ROOT, '后端源码');
 const FRONTEND_DIR = path.join(PKG_ROOT, '前端参考');
 
-const BACKEND_PORT = 3000;
+let BACKEND_PORT, DB_PORT, DB_HOST, START_PORT, MYSQL_BASEDIR, MYSQL_DATA_DIR, MYSQLD;
 
-// ★ MySQL 端口从 后端源码/.env 里读 ★
-//   安装脚本可能没用 3306（另装了一个独立实例时是 3307），
-//   这里写死 3306 的话，启动时会去拉错的那个实例。
-function readDbPort() {
-  try {
-    const env = fs.readFileSync(path.join(SERVER_DIR, '.env'), 'utf8');
-    const m = env.match(/^DB_PORT=(.*)$/m);
-    const n = m ? Number(String(m[1]).trim()) : 0;
-    return Number.isFinite(n) && n > 0 ? n : 3306;
-  } catch (e) { return 3306; }
+function validPort(value, name) {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(name + ' 必须是 1 到 65535 之间的整数');
+  }
+  return port;
 }
-const DB_PORT = readDbPort();
 
-/** 数据目录：3306 用 data/，别的端口用 data-<端口>/（和安装脚本一致） */
-function dataDirOf(port) {
-  return port === 3306 ? path.join(MYSQL_HOME, 'data') : path.join(MYSQL_HOME, 'data-' + port);
+function loadConfig() {
+  if (!fs.existsSync(path.join(SERVER_DIR, '.env'))) {
+    throw new Error('缺少 后端源码/.env，请按部署指南配置后再启动');
+  }
+  let dotenv;
+  try { dotenv = require(require.resolve('dotenv', { paths: [SERVER_DIR] })); }
+  catch { throw new Error('后端依赖没装，请先在 后端源码 执行 npm ci'); }
+  // 与后端配置一致：系统环境变量优先，.env 不覆盖已有值。
+  dotenv.config({ path: path.join(SERVER_DIR, '.env') });
+  BACKEND_PORT = validPort(process.env.PORT || '3000', 'PORT');
+  DB_PORT = validPort(process.env.DB_PORT || '3306', 'DB_PORT');
+  DB_HOST = process.env.DB_HOST || '127.0.0.1';
+  START_PORT = readPortArg();
+  const home = process.env.MYSQL_DIR || (fs.existsSync('D:\\') ? 'D:\\mysql' : path.join(os.homedir(), 'mysql'));
+  MYSQL_BASEDIR = path.resolve(process.env.MYSQL_BASEDIR || path.join(home, 'mysql-8.0.28-winx64'));
+  MYSQL_DATA_DIR = path.resolve(process.env.MYSQL_DATA_DIR || path.join(home, DB_PORT === 3306 ? 'data' : 'data-' + DB_PORT));
+  MYSQLD = path.join(MYSQL_BASEDIR, 'bin', process.platform === 'win32' ? 'mysqld.exe' : 'mysqld');
+}
+
+function mysqlStartArgs() {
+  if (!['127.0.0.1', 'localhost', '::1'].includes(DB_HOST)) {
+    throw new Error('远程数据库不可达，请检查 DB_HOST / DB_PORT；不会启动本地 MySQL');
+  }
+  if (!fs.existsSync(MYSQLD)) throw new Error('找不到 MySQL，请配置 MYSQL_BASEDIR 指向已安装目录');
+  if (!fs.existsSync(path.join(MYSQL_DATA_DIR, 'auto.cnf')) || !fs.existsSync(path.join(MYSQL_DATA_DIR, 'mysql'))) {
+    throw new Error('MySQL 数据目录尚未初始化，请检查 MYSQL_DATA_DIR；启动器不会初始化或重置密码');
+  }
+  // Windows MySQL may misdecode non-ASCII command-line datadir paths.
+  // Spawn in the verified data directory and pass an ASCII relative path.
+  return ['--no-defaults', '--basedir=' + MYSQL_BASEDIR, '--datadir=.',
+    '--port=' + DB_PORT, '--bind-address=' + (DB_HOST === '::1' ? '::1' : '127.0.0.1'), '--mysqlx=0', '--console'];
 }
 
 // 端口参数：--port 8081 或 --port=8081
 function readPortArg() {
   const eq = process.argv.find(a => a.startsWith('--port='));
-  if (eq) return Number(eq.split('=')[1]) || 8080;
+  if (eq) return validPort(eq.slice('--port='.length), '--port');
   const i = process.argv.indexOf('--port');
-  if (i !== -1 && process.argv[i + 1]) return Number(process.argv[i + 1]) || 8080;
+  if (i !== -1) return validPort(process.argv[i + 1], '--port');
   return 8080;
 }
-const START_PORT = readPortArg();
 const NO_OPEN = process.argv.includes('--no-open');
-
-const MYSQL_HOME = process.env.MYSQL_DIR || (fs.existsSync('D:\\') ? 'D:\\mysql' : path.join(os.homedir(), 'mysql'));
-const MYSQL_NAME = 'mysql-8.0.28-winx64';
-const MYSQLD = path.join(MYSQL_HOME, MYSQL_NAME, 'bin', 'mysqld.exe');
+let ownedBackend;
+function stopOwnedBackend() {
+  if (ownedBackend && ownedBackend.exitCode === null && !ownedBackend.killed) ownedBackend.kill();
+}
 
 const c = { reset: '\x1b[0m', green: '\x1b[32m', yellow: '\x1b[33m', red: '\x1b[31m', dim: '\x1b[2m', bold: '\x1b[1m' };
 const ok = m => console.log('  ' + c.green + '✅' + c.reset + ' ' + m);
@@ -72,9 +94,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 function portOpen(port, host = '127.0.0.1') {
   return new Promise(resolve => {
     const s = net.connect({ host, port });
-    s.once('connect', () => { s.destroy(); resolve(true); });
-    s.once('error', () => resolve(false));
-    s.setTimeout(800, () => { s.destroy(); resolve(false); });
+    const finish = result => { clearTimeout(timer); s.destroy(); resolve(result); };
+    const timer = setTimeout(() => finish(false), 800);
+    s.once('connect', () => finish(true));
+    s.once('error', () => finish(false));
   });
 }
 
@@ -89,7 +112,8 @@ function checkHealth() {
       res.on('end', () => {
         try {
           const j = JSON.parse(buf);
-          resolve(j && j.data && j.data.db ? j.data.db : { connected: false, error: 'health 返回结构不对' });
+          resolve(res.statusCode === 200 && j.code === 0 && j.data?.service === '陪着后端' && j.data.db
+            ? j.data.db : { connected: false, error: 'health 返回结构不对' });
         } catch (e) {
           resolve({ connected: false, error: 'health 不是 JSON' });
         }
@@ -127,11 +151,15 @@ const MIME = {
 };
 
 function serveStatic(req, res) {
-  let urlPath = decodeURIComponent(req.url.split('?')[0]);
+  let urlPath;
+  try { urlPath = decodeURIComponent(req.url.split('?')[0]); }
+  catch { res.writeHead(400); res.end('invalid URL'); return; }
+  if (urlPath.includes('\0')) { res.writeHead(400); res.end('invalid URL'); return; }
   if (urlPath === '/') urlPath = '/login.html';
 
   const filePath = path.join(FRONTEND_DIR, urlPath);
-  if (!filePath.startsWith(FRONTEND_DIR)) {
+  const relative = path.relative(FRONTEND_DIR, filePath);
+  if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
     res.writeHead(403); res.end('forbidden'); return;
   }
   fs.readFile(filePath, (err, buf) => {
@@ -185,7 +213,7 @@ function listenWithFallback(server, startPort, tries = 20) {
 
       const onError = (err) => {
         server.removeListener('listening', onListening);
-        if (err.code === 'EADDRINUSE' && attempt < tries - 1) {
+        if (err.code === 'EADDRINUSE' && attempt < tries - 1 && port < 65535) {
           attempt++;
           tryOnce();
         } else {
@@ -207,52 +235,39 @@ function listenWithFallback(server, startPort, tries = 20) {
 }
 
 // ---------- main ----------
-(async () => {
+async function main() {
+  loadConfig();
   console.log(c.bold + '\n==============================================' + c.reset);
   console.log(c.bold + '  微光同行 · 启动' + c.reset);
   console.log(c.bold + '==============================================' + c.reset);
 
-  // 1. MySQL
-  if (!(await portOpen(DB_PORT))) {
-    if (!fs.existsSync(MYSQLD)) {
-      bad('找不到 MySQL，也没检测到 ' + DB_PORT + ' 端口');
-      console.log('  先跑一次「一键安装.bat」');
-      process.exit(1);
-    }
+  // /api/health 无法证明服务来自哪个 checkout。拒绝复用，且必须先于数据库操作。
+  if (await portOpen(BACKEND_PORT)) {
+    throw new Error('后端端口 ' + BACKEND_PORT + ' 已被占用，无法确认归属。请停止已确认的旧实例，或在 .env 中选择空闲 PORT');
+  }
+
+  // 1. MySQL：只启动已初始化目录，不创建库或更改认证。
+  if (!(await portOpen(DB_PORT, DB_HOST))) {
+    const args = mysqlStartArgs();
     console.log('  ' + c.dim + '启动 MySQL……' + c.reset);
-    const child = spawn(MYSQLD, [
-      '--basedir=' + path.join(MYSQL_HOME, MYSQL_NAME),
-      '--datadir=' + dataDirOf(DB_PORT),
-      '--port=' + DB_PORT, '--console',
-    ], { detached: true, stdio: 'ignore' });
+    const child = spawn(MYSQLD, args, { cwd: MYSQL_DATA_DIR, detached: true, stdio: 'ignore', windowsHide: true });
+    let mysqlError;
+    child.once('error', error => { mysqlError = error; });
     child.unref();
     for (let i = 0; i < 40; i++) {
       await sleep(1000);
-      if (await portOpen(DB_PORT)) break;
+      if (mysqlError) throw new Error('MySQL 启动失败：' + mysqlError.code);
+      if (await portOpen(DB_PORT, DB_HOST)) break;
     }
-    if (!(await portOpen(DB_PORT))) { bad('MySQL 启动失败（端口 ' + DB_PORT + '）'); process.exit(1); }
+    if (!(await portOpen(DB_PORT, DB_HOST))) throw new Error('MySQL 启动失败（端口 ' + DB_PORT + '）');
     ok('MySQL 已启动（' + DB_PORT + '）');
   } else {
     ok('MySQL 在运行（' + DB_PORT + '）');
   }
 
   // 2. 后端
-  if (!(await portOpen(BACKEND_PORT))) {
-    if (!fs.existsSync(path.join(SERVER_DIR, 'node_modules'))) {
-      bad('后端依赖没装，先跑一次「一键安装.bat」');
-      process.exit(1);
-    }
-    // ★ 没有 .env 就启动不了 ★
-    //   包是故意不带 .env 的（里面是数据库密码），必须由「一键安装」生成。
-    //   以前这里直接拉起后端，后端因为缺少 DB_PASSWORD 立刻退出，
-    //   而 .bat 只看到"后端没起来"，用户完全不知道要先跑安装。
-    if (!fs.existsSync(path.join(SERVER_DIR, '.env'))) {
-      bad('还没生成 后端源码/.env（数据库密码在里面）');
-      console.log('');
-      console.log('  请先双击 ' + c.bold + '「一键安装.bat」' + c.reset + '，跑完再启动。');
-      console.log('  ' + c.dim + '安装会问你 MySQL 密码，然后自动写 .env、建库、灌演示数据' + c.reset);
-      process.exit(1);
-    }
+  if (await portOpen(BACKEND_PORT)) throw new Error('后端端口 ' + BACKEND_PORT + ' 已被占用；已停止后续启动');
+  {
     // 启动前先把表结构对齐（幂等：老库缺字段会自动补上）
     //   以前不检查，前端同学用老库启动后一点登录就 500（缺 session_version），
     //   而窗口里只有一句"后端已启动"，根本看不出是数据库的问题。
@@ -260,12 +275,12 @@ function listenWithFallback(server, startPort, tries = 20) {
     if (fs.existsSync(migrateScript)) {
       console.log('  ' + c.dim + '检查表结构……' + c.reset);
       const mr = spawnSync(process.execPath, ['scripts/migrate.js'], {
-        cwd: SERVER_DIR, encoding: 'utf8', timeout: 120000,
+        cwd: SERVER_DIR, encoding: 'utf8', timeout: 120000, windowsHide: true,
       });
       if (mr.status === 0) {
         console.log('  ' + c.green + '✅ 表结构已是最新' + c.reset);
       } else {
-        console.log('  ' + c.yellow + '⚠️  表结构检查有报错，继续启动（后端启动时会自动补）' + c.reset);
+        throw new Error('表结构迁移失败，已停止启动；请在 后端源码 执行 node scripts/migrate.js 查看详情');
       }
     }
 
@@ -275,12 +290,18 @@ function listenWithFallback(server, startPort, tries = 20) {
     let out = null;
     try { out = fs.openSync(LOG_PATH, 'w'); } catch (e) { /* 没权限就退回 ignore */ }
     const be = spawn(process.execPath, ['src/app.js'], {
-      cwd: SERVER_DIR, detached: true, stdio: out === null ? 'ignore' : ['ignore', out, out],
+      cwd: SERVER_DIR, detached: true, windowsHide: true, stdio: out === null ? 'ignore' : ['ignore', out, out],
     });
+    ownedBackend = be;
+    let backendError;
+    let backendExited = false;
+    be.once('error', error => { backendError = error; });
+    be.once('exit', () => { backendExited = true; });
     be.unref();
     if (out !== null) { try { fs.closeSync(out); } catch (e) {} }
     for (let i = 0; i < 25; i++) {
       await sleep(800);
+      if (backendError || backendExited) throw new Error('本目录后端启动失败，请检查 后端源码/backend.log');
       if (await portOpen(BACKEND_PORT)) break;
     }
     if (!(await portOpen(BACKEND_PORT))) {
@@ -299,9 +320,7 @@ function listenWithFallback(server, startPort, tries = 20) {
       console.log('  也可以手动跑，看完整输出：' + c.dim + 'cd 后端源码 && node src/app.js' + c.reset);
       process.exit(1);
     }
-    ok('后端已启动（3000）');
-  } else {
-    ok('后端在运行（3000）');
+    ok('后端已启动（' + BACKEND_PORT + '）');
   }
 
   // 2.5 数据库到底通不通（后端活着不代表连得上 MySQL）
@@ -311,14 +330,14 @@ function listenWithFallback(server, startPort, tries = 20) {
   } else {
     bad('后端起来了，但数据库没连上：' + (db.error || '未知原因'));
     console.log('');
-    console.log('  ' + c.yellow + '页面能打开，但一点「我的」就会报"连不上 MySQL"。' + c.reset);
+    console.log('  ' + c.yellow + '数据库不可用，前端不会启动。' + c.reset);
     console.log('  按顺序排查：');
     console.log('    1) MySQL 是否在跑：任务管理器里找 mysqld.exe');
-    console.log('    2) 手动起：' + c.dim + 'D:\\mysql\\mysql-8.0.28-winx64\\bin\\mysqld.exe --datadir=D:/mysql/data --console' + c.reset);
+    console.log('    2) 实例路径对不对：检查 MYSQL_BASEDIR / MYSQL_DATA_DIR');
     console.log('    3) 密码对不对：看 后端源码/.env 里的 DB_PASSWORD');
     console.log('    4) 端口对不对：看 后端源码/.env 里的 DB_PORT');
     console.log('');
-    if (!NO_OPEN === false) { /* 仍然继续起静态服务，方便排查 */ }
+    throw new Error('数据库健康检查失败，已停止前端启动');
   }
 
   // 3. 静态服务
@@ -346,15 +365,24 @@ function listenWithFallback(server, startPort, tries = 20) {
   console.log('  登录：13800138000    验证码：123456');
   console.log('  接口文档：接口文档.md');
   console.log('');
-  console.log(c.dim + '  按 Ctrl+C 停止（MySQL 和后端会继续在后台跑）' + c.reset);
+  console.log(c.dim + '  按 Ctrl+C 停止前端及本次启动的后端（MySQL 保持运行）' + c.reset);
   console.log('');
 
   if (!NO_OPEN) {
     const url = 'http://localhost:' + port;
     if (process.platform === 'win32') {
-      spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
+      spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
     } else if (process.platform === 'darwin') {
       spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
     }
   }
-})();
+}
+
+if (require.main === module) {
+  process.once('exit', stopOwnedBackend);
+  process.once('SIGINT', () => { stopOwnedBackend(); process.exit(130); });
+  process.once('SIGTERM', () => { stopOwnedBackend(); process.exit(143); });
+  main().catch(error => { bad(error.message); process.exitCode = 1; });
+}
+
+module.exports = { loadConfig, mysqlStartArgs, validPort, main };

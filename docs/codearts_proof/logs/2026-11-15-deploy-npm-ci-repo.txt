@@ -1,0 +1,9 @@
+COMMAND=npm ci --no-audit --no-fund
+CWD=D:\微光同行\Glimmer\.deploy_repro\checkout-fixed\后端源码
+STARTED_AT=2026-11-15T13:53:24.943Z
+
+
+added 143 packages in 958ms
+npm warn deprecated multer@1.4.5-lts.2: Multer 1.x is impacted by a number of vulnerabilities, which have been patched in 2.x. You should upgrade to the latest 2.x version.
+
+EXIT_CODE=0

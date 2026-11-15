@@ -1,0 +1,62 @@
+{
+  "launcherPid": 44484,
+  "health": {
+    "proxy": {
+      "service": "陪着后端",
+      "version": "0.1.0",
+      "env": "development",
+      "time": "2026/11/15 22:42:25",
+      "uptime": "0s",
+      "db": {
+        "connected": true,
+        "version": "8.4.13"
+      },
+      "ai": {
+        "configured": false,
+        "model": "deepseek-chat"
+      }
+    },
+    "direct": {
+      "service": "陪着后端",
+      "version": "0.1.0",
+      "env": "development",
+      "time": "2026/11/15 22:42:25",
+      "uptime": "1s",
+      "db": {
+        "connected": true,
+        "version": "8.4.13"
+      },
+      "ai": {
+        "configured": false,
+        "model": "deepseek-chat"
+      }
+    },
+    "frontendHash": "31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270"
+  },
+  "initdb-first": {
+    "exit": 0
+  },
+  "initdb-second": {
+    "exit": 0
+  },
+  "smoke": {
+    "exit": 0
+  },
+  "cleanupPending": true,
+  "launcherRunning": true,
+  "frontend": {
+    "exit": 0
+  },
+  "engineering-tests": {
+    "exit": 0
+  },
+  "competition": {
+    "exit": 0
+  },
+  "merge24": {
+    "exit": 0
+  },
+  "independent": {
+    "exit": 0
+  }
+}

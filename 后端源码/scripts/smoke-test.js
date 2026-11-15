@@ -84,7 +84,7 @@ for (const f of [
 
 // 前端文件（可能和本仓库不同步，所以只警告不失败）
 console.log('\n  --- 前端文件（缺失只警告）---');
-const FRONTEND_DIR = 'D:/Study/Match/2026-2027.up/chat/前端八稿';
+const FRONTEND_DIR = path.resolve(process.argv[2] || path.join(ROOT, '..', '前端参考'));
 for (const f of ['api.js', 'data.js', 'login.html', 'index.html', 'diary-write.html']) {
   const full = FRONTEND_DIR + '/' + f;
   if (fs.existsSync(full)) {
@@ -305,13 +305,13 @@ check('★ 前端目录里没有明文 API Key（这条最重要）', () => {
   //
   //   所以这条检查必须在【前端目录】跑，而不是只在 src/ 里跑。
   //   （原来只查 src/，结果真正的泄露点在前端，检查是绿的。）
-  const FRONTEND = 'D:/Study/Match/2026-2027.up/chat/前端八稿';
-  if (!fs.existsSync(FRONTEND)) {
-    return '（找不到前端目录，跳过）';
+  if (!fs.existsSync(FRONTEND_DIR)) {
+    return '找不到前端目录，无法完成 API Key 安全检查';
   }
-  const files = fs.readdirSync(FRONTEND).filter(f => /\.(js|html)$/.test(f));
+  const files = fs.readdirSync(FRONTEND_DIR).filter(f => /\.(js|html)$/.test(f));
+  if (files.length === 0) return '前端目录没有 JS/HTML，无法完成 API Key 安全检查';
   for (const f of files) {
-    const c = fs.readFileSync(path.join(FRONTEND, f), 'utf8');
+    const c = fs.readFileSync(path.join(FRONTEND_DIR, f), 'utf8');
     // sk- 开头后面跟 20 位以上的字母数字 —— 连注释里的都不放过
     if (/sk-[a-zA-Z0-9]{20,}/.test(c)) {
       return `${f} 里有明文的 DeepSeek Key（连注释里的也要删掉）`;
@@ -320,11 +320,11 @@ check('★ 前端目录里没有明文 API Key（这条最重要）', () => {
   return true;
 });
 check('前端没有直接请求第三方大模型接口', () => {
-  const FRONTEND = 'D:/Study/Match/2026-2027.up/chat/前端八稿';
-  if (!fs.existsSync(FRONTEND)) return '（跳过）';
-  const files = fs.readdirSync(FRONTEND).filter(f => /\.(js|html)$/.test(f));
+  if (!fs.existsSync(FRONTEND_DIR)) return '找不到前端目录，无法完成第三方接口安全检查';
+  const files = fs.readdirSync(FRONTEND_DIR).filter(f => /\.(js|html)$/.test(f));
+  if (files.length === 0) return '前端目录没有 JS/HTML，无法完成第三方接口安全检查';
   for (const f of files) {
-    const c = fs.readFileSync(path.join(FRONTEND, f), 'utf8');
+    const c = fs.readFileSync(path.join(FRONTEND_DIR, f), 'utf8');
     // 前端只能请求我们自己的后端，不能直连 api.deepseek.com
     if (/api\.deepseek\.com/.test(c)) {
       return `${f} 里前端直接调了 DeepSeek（Key 会被暴露）`;
@@ -343,9 +343,8 @@ check('密码/密钥没有被打进日志', () => {
 
 // ---------- 7. 前端一致性 ----------
 console.log('\n[7] 和前端的一致性');
-const FRONTEND = 'D:/Study/Match/2026-2027.up/chat/前端八稿';
 check('前端目录还在（顺手确认路径没写错）', () => {
-  return fs.existsSync(FRONTEND) || `找不到前端目录 ${FRONTEND}`;
+  return fs.existsSync(FRONTEND_DIR) || `找不到前端目录 ${FRONTEND_DIR}`;
 });
 check('手机号校验规则和前端一致（1开头11位）', () => {
   const v = read('src/utils/validate.js');

@@ -1,0 +1,18 @@
+STARTED_AT=2026-11-15T14:04:51.356Z
+MYSQL_PID=47632 PORT_OPEN=true
+MYSQL_ALTER_EXIT=0
+INITDB_first_EXIT=0
+INITDB_second_EXIT=0
+BACKEND_PID=12200 PORT_OPEN=true
+HEALTH={"code":0,"msg":"ok","data":{"service":"陪着后端","version":"0.1.0","env":"development","time":"2026/11/15 22:04:54","uptime":"0s","db":{"connected":true,"version":"8.4.13"},"ai":{"configured":false,"model":"deepseek-chat"}}}
+FRONTEND_PORT_OPEN=true
+FRONTEND_CHAT_COMPANION_SHA256=31C567E972B963BBCE63877728958DBD755890A1AFBA7456F924E781B3A22270
+regression-single EXIT=0
+regression-single ℹ tests 68 | ℹ pass 68 | ℹ fail 0
+regression-competition EXIT=0
+regression-competition ℹ tests 137 | ℹ pass 137 | ℹ fail 0
+regression-merge24 EXIT=0
+regression-merge24 ℹ tests 23 | ℹ pass 23 | ℹ fail 0
+regression-independent EXIT=0
+regression-independent ℹ tests 4 | ℹ pass 4 | ℹ fail 0
+SUMMARY single=0 competition=0 merge24=0 independent=0

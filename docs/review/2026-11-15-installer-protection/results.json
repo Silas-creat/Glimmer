@@ -1,0 +1,81 @@
+{
+  "commands": {
+    "fresh-check": {
+      "code": 0,
+      "expected": 0
+    },
+    "fresh-install": {
+      "code": 0,
+      "expected": 0
+    },
+    "repeat-preserves": {
+      "code": 0,
+      "expected": 0
+    },
+    "existing-check": {
+      "code": 0,
+      "expected": 0
+    },
+    "force-private-refused": {
+      "code": 1,
+      "expected": 1
+    },
+    "existing-explicit": {
+      "code": 0,
+      "expected": 0
+    },
+    "wrong-uuid-refused": {
+      "code": 1,
+      "expected": 1
+    },
+    "engineering": {
+      "code": 0,
+      "expected": 0
+    },
+    "smoke": {
+      "code": 0,
+      "expected": 0
+    },
+    "frontend": {
+      "code": 0,
+      "expected": 0
+    },
+    "competition": {
+      "code": 0,
+      "expected": 0
+    },
+    "merge24": {
+      "code": 0,
+      "expected": 0
+    },
+    "independent": {
+      "code": 0,
+      "expected": 0
+    }
+  },
+  "identity": {
+    "port": 3313,
+    "uuid": "f63278ed-e107-11f1-b559-005056c00001"
+  },
+  "preservation": {
+    "envUnchanged": true,
+    "authenticationUnchanged": true,
+    "sentinelPreserved": true,
+    "authPlugin": "caching_sha2_password"
+  },
+  "sourceHashes": {
+    "env": "241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a",
+    "companion": "31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270"
+  },
+  "additional": {
+    "occupiedRealPortRefused": true,
+    "wrongPasswordRefused": true,
+    "secretsNotEchoed": true,
+    "shutdownUuidVerified": true
+  },
+  "finalLifecycle": {
+    "realFailurePortClosed": true,
+    "realSuccessPort": 3315,
+    "uuidVerified": true
+  }
+}

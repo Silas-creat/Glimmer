@@ -1,0 +1,487 @@
+
+> peizhe-server@0.1.0 test:competition
+> node --test scripts/test-ai-session.test.js scripts/test-chat-session.test.js scripts/test-chat-companion.test.js scripts/test-chat-companion-repair.test.js scripts/test-crisis-policy.test.js && node scripts/test-companion.test.js && node scripts/test-moderation.js && node scripts/test-chatbot.js
+
+Synthetic AI session user id: 8
+✔ remember:false isolates stored memory and history and never changes persisted rows (81.8768ms)
+✔ explicit remember:true requires login; omitted remember keeps anonymous and logged-in compatibility (32.4166ms)
+✔ rejects invalid history, roles, lengths, remember types and nonstring messages (24.5641ms)
+✔ clear waits for an in-flight persistent chat and removes all resulting messages (129.2454ms)
+✔ message pair and profile statistics roll back together on assistant write failure (13.5333ms)
+✔ model outage returns explicit fallback and deterministic crisis care (7.6869ms)
+✔ background summary does not delay chat or clear and cannot restore cleared memory (200.0005ms)
+✔ queued persistent chats see the preceding committed reply and ignore client-supplied history (90.9417ms)
+✔ background summary advances the message id cursor and preserves the recent tail (80.9737ms)
+✔ missing API key uses explicit local mode without loopback or external model traffic (8.3228ms)
+✔ old summary cannot replace memory after clearing and beginning a new persistent conversation (160.755ms)
+✔ P1-01 closing save during /auth/me keeps the user choice temporary (4.7665ms)
+✔ P1-02 initial preference restore loses to a later explicit close (1.9464ms)
+✔ P1-03 a late auth response for another account does not grant save (1.7759ms)
+✔ P1-04 a reply arriving after clear never re-enters the next temporary request (2.2099ms)
+✔ P1-05 a failed clear keeps the visible turns and context (1.6259ms)
+✔ P1-06 clear then immediate send is not blocked by the old pending request (1.651ms)
+✔ P1-07 account switch clears A data and sends B as temporary (1.9937ms)
+✔ P1-08 an old saved reply cannot repopulate after account switch (1.7958ms)
+✔ P2-01 an old memory response cannot overwrite a successful clear (1.4992ms)
+✔ P2-02 closing the panel discards a pending memory response (1.3601ms)
+✔ B2 prepare responses cannot replace a newer draft (2.7987ms)
+✔ B3 cancel is terminal and cannot submit a confirmation (1.7849ms)
+✔ B1 confirmation timeout retries the same draft id and renders real data (2.4731ms)
+✔ B4 crisis care is rendered inside the open panel with tel links (2.5661ms)
+✔ B3 error mapping separates cancellation, conflict, expiry and deleted diary (0.208ms)
+✔ P2-03 a failed clear keeps the server summary and explains the failure (1.1674ms)
+✔ normal confirm still posts once and renders the real diary result (1.224ms)
+✔ EDGE-R1-01 draft material is bound to the selecting account before prepare (1.3083ms)
+✔ EDGE-R1-02 same-account token refresh still prepares exactly once (1.2023ms)
+✔ EDGE-R1-03 confirm does not submit A draft after credentials switch to B without storage (1.5356ms)
+✔ EDGE-R1-04 a late prepare response cannot land after credentials switch to B (1.1648ms)
+✔ EDGE-R2-01 memory opened during pending clear cannot restore the cleared summary (1.0762ms)
+✔ EDGE-R2-02 a successful clear invalidates an already rendered old summary (1.0766ms)
+✔ EDGE-R2-03 a successful clear leaves an open draft editor untouched (1.1853ms)
+✔ EDGE-R3-01 a late clear success for A cannot wipe B page or announce B cleared (2.4621ms)
+✔ EDGE-R3-02 closing the clear panel still clears the same account context (1.3505ms)
+✔ EDGE-R3-03 a late clear failure for A cannot show on B page (1.2287ms)
+✔ EDGE-R4-01 an obsolete send cannot unlock a newer pending send (1.2308ms)
+✔ EDGE-R4-02 double click during identity verification sends only once (1.1209ms)
+✔ EDGE-R4-03 a late send failure for A cannot overwrite B input or notice (1.1693ms)
+✔ EDGE-R5-01 confirm success shows full care inside the open dialog (1.5776ms)
+✔ EDGE-R5-02 recovered confirm success also shows full care in the dialog (1.5698ms)
+✔ EDGE-R5-03 confirm success without care renders no care block or tel link (1.4503ms)
+✔ EDGE-R6-01 crisis prepare stops generation with care and return entry (1.2589ms)
+✔ EDGE-R6-02 a failed prepare is retryable and is not a stopped terminal (1.3552ms)
+✔ EDGE-R6-03 stopped care does not leak into the next account page (1.2329ms)
+✔ EDGE-R7-01 a late auth response after storage-switch cannot submit A draft material (1.241ms)
+✔ EDGE-R7-02 a pending verification cannot prepare after the panel is closed (1.4227ms)
+✔ EDGE-R7-03 a valid same-account token refresh prepares exactly once (1.1781ms)
+✔ EDGE-R7-04 a late auth response cannot confirm A draft on B credentials (1.2102ms)
+✔ EDGE-R7-05 a late auth response cannot cancel A draft on B credentials (1.2593ms)
+✔ EDGE-R7-06 a late auth response cannot send A text on B credentials (1.0203ms)
+✔ EDGE-R7-07 a late restore verification cannot write A history into B page (1.7544ms)
+✔ EDGE-R7-08 a verification that outlives a second token refresh cannot prepare (1.2101ms)
+✔ EDGE-R7-09 a late prepare response cannot land after the panel is closed (1.1777ms)
+✔ EDGE-R8-01 a guest can send a temporary unsaved chat without verification (1.2091ms)
+✔ EDGE-R8-02 a guest refresh clears anonymous turns and can send again (2.2898ms)
+✔ EDGE-R8-03 a guest cannot enable saved mode (0.9705ms)
+✔ EDGE-R8-04 a guest history memory draft entry asks for login without data (0.9827ms)
+✔ EDGE-R8-05 token removal isolates A context before a guest send (1.1034ms)
+✔ EDGE-R8-06 logout clears draft and memory then allows guest send (1.2097ms)
+✔ EDGE-R8-07 an old signed-in reply cannot land after logout (3.1471ms)
+✔ EDGE-R8-08 guest-to-login does not reuse anonymous content or enable saving (1.2812ms)
+✔ EDGE-R8-09 a guest double click sends only one request (1.0644ms)
+✔ EDGE-R8-10 a failed guest send keeps the text and writes no history (1.2237ms)
+✔ EDGE-R9-01 a guest can send three consecutive messages with page-local context (1.7521ms)
+✔ EDGE-R9-02 a guest refresh clears page-local conversation and keeps sending possible (2.2263ms)
+✔ EDGE-R9-03 a guest retry after a failed send reaches the API (1.1313ms)
+✔ EDGE-R9-04 guest history entry only asks login and keeps the conversation (1.0321ms)
+✔ EDGE-R9-05 guest memory entry only asks login and keeps the conversation (0.9851ms)
+✔ EDGE-R9-06 guest clear entry only asks login and keeps the conversation (0.9858ms)
+✔ EDGE-R9-07 guest draft entry only asks login and keeps the conversation (1.0004ms)
+✔ EDGE-R9-08 closing a login-only panel lets the guest continue chatting (1.0964ms)
+✔ EDGE-R9-09 a guest send keeps working while a login-only panel is open (1.226ms)
+✔ EDGE-R9-10 real logout still isolates the previous account context (1.3015ms)
+✔ EDGE-R9-11 token removal with user still present isolates before guest chat (1.0167ms)
+✔ EDGE-R9-12 account switch still isolates the previous account context (1.0086ms)
+✔ EDGE-R9-13 a guest double click still sends only one request (1.0662ms)
+✔ saved chat sends explicit remember:true with an empty client history (1.7423ms)
+✔ temporary reset clears the next request history without changing the request shape (0.2684ms)
+✔ invalidate makes an in-flight response stale without changing the protocol (0.1712ms)
+✔ save preference is scoped to the current uid and defaults to off (0.1928ms)
+✔ user id accepts both uid and id and never leaks other fields (0.2128ms)
+✔ draft material keeps the selected order and rejects empty or over-2000 content (0.2092ms)
+✔ draft text validation allows 5000 and rejects 5001 UTF-16 units (0.2175ms)
+✔ local date key uses calendar fields instead of UTC (1.3581ms)
+✔ older history pages are prepended and de-duplicated by id (0.1901ms)
+✔ draft error codes map to actionable states (0.2324ms)
+✔ only same-site diary write links are accepted (0.305ms)
+✔ provider status never presents the local fallback as a real model (0.0794ms)
+✔ temporary chat sends explicit no-memory consent and retains only completed turns (2.1518ms)
+✔ a second submit cannot create another request while the first reply is pending (0.5385ms)
+✔ failed turns preserve care but are excluded from later model context (0.2039ms)
+✔ history stays within the backend limit and long input never leaves the client (0.4511ms)
+✔ long model replies remain fully visible without breaking subsequent history requests (0.2578ms)
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截公开日记 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截公开日记 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截公开日记 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截公开日记 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截评论 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截评论 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截评论 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截评论 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [人身攻击] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 拦截私信 [刷屏] from=71 to=72
+  🤖 拦截私信 [广告导流] from=71 to=72
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  💚 群 interest 检测到危机信号，机器人已发关怀提示
+  🤖 群 interest 拦截消息 [人身攻击] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 群 interest 拦截消息 [刷屏] user=71 第1次
+  🤖 群 interest 拦截消息 [广告导流] user=71 第1次
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  ✿ synthetic → synthetic target：我不想活了
+  🤖 拦截祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  ✿ synthetic → synthetic target：今天很难过，想找个人聊聊
+  🤖 拦截祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99，我不想活了"
+  🍾 synthetic 扔了一个瓶子：我不想活了
+  🤖 拦截漂流瓶 [人身攻击] user=71 内容="我不想活了，你这个废物"
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截漂流瓶 [刷屏] user=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🍾 synthetic 扔了一个瓶子：今天很难过，想找个人聊聊
+  🤖 拦截漂流瓶 [广告导流] user=71 内容="加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99，我不想活了"
+  🤖 拦截瓶子祝福 [人身攻击] from=71 内容="我不想活了，你这个废物"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="想消失，加我微信 synthetic99"
+  🤖 拦截瓶子祝福 [刷屏] from=71 内容="我不想活了aaaaaaaaaaaaaaaaaaaa"
+  🤖 拦截瓶子祝福 [广告导流] from=71 内容="加我微信 synthetic99"
+✔ crisis remains visible when advertising matches first (1.2553ms)
+✔ mixed crisis never hides another moderation category (0.8301ms)
+✔ group bot preserves both flags and the existing penalty tiers (0.3679ms)
+✔ public diary blocks mixed advertising while returning care (2.2907ms)
+✔ public diary allows pure crisis with care (1.0532ms)
+✔ public diary does not let crisis cancel attacks or spam (0.4271ms)
+✔ public diary keeps ordinary sadness and advertising separate (0.4143ms)
+✔ new comment blocks mixed advertising while returning care (0.457ms)
+✔ new comment allows pure crisis with care (0.5356ms)
+✔ new comment does not let crisis cancel attacks or spam (0.3651ms)
+✔ new comment keeps ordinary sadness and advertising separate (0.2768ms)
+✔ edited comment blocks mixed advertising while returning care (0.2045ms)
+✔ edited comment allows pure crisis with care (0.1156ms)
+✔ edited comment does not let crisis cancel attacks or spam (0.125ms)
+✔ edited comment keeps ordinary sadness and advertising separate (0.1175ms)
+✔ private message blocks mixed advertising while returning care (0.4005ms)
+✔ private message allows pure crisis with care (0.2086ms)
+✔ private message does not let crisis cancel attacks or spam (0.245ms)
+✔ private message keeps ordinary sadness and advertising separate (0.1812ms)
+✔ group message blocks mixed advertising while returning care (0.4211ms)
+✔ group message allows pure crisis with care (0.2784ms)
+✔ group message does not let crisis cancel attacks or spam (0.264ms)
+✔ group message keeps ordinary sadness and advertising separate (0.1871ms)
+✔ blessing blocks mixed advertising while returning care (0.2502ms)
+✔ blessing allows pure crisis with care (0.3354ms)
+✔ blessing does not let crisis cancel attacks or spam (0.1791ms)
+✔ blessing keeps ordinary sadness and advertising separate (0.1573ms)
+✔ bottle toss blocks mixed advertising while returning care (0.208ms)
+✔ bottle toss allows pure crisis with care (0.1548ms)
+✔ bottle toss does not let crisis cancel attacks or spam (0.122ms)
+✔ bottle toss keeps ordinary sadness and advertising separate (0.1103ms)
+✔ bottle blessing blocks mixed advertising while returning care (0.149ms)
+✔ bottle blessing allows pure crisis with care (0.0659ms)
+✔ bottle blessing does not let crisis cancel attacks or spam (0.1116ms)
+✔ bottle blessing keeps ordinary sadness and advertising separate (0.0747ms)
+✔ publicizing a private mixed diary cannot bypass moderation (0.1707ms)
+✔ private diary retains mixed content with care (0.1276ms)
+✔ visibility permits a pure crisis and still permits making mixed content private (0.1103ms)
+✔ visibility cannot publish mixed content saved after its moderation snapshot (0.4405ms)
+✔ visibility detects concurrent visibility changes even when text is unchanged (0.1906ms)
+✔ ordinary sadness and advertising alone do not trigger crisis care (0.176ms)
+ℹ tests 137
+ℹ suites 0
+ℹ pass 137
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1261.1695
+[提示] POST /api/companion/prepare -> 401 还没登录，请先登录
+PASS authentication required
+[提示] POST /api/companion/prepare -> 400 日期必须是有效的 YYYY-MM-DD
+[提示] POST /api/companion/prepare -> 400 日期必须是有效的 YYYY-MM-DD
+[提示] POST /api/companion/prepare -> 400 日期必须是有效的 YYYY-MM-DD
+[提示] POST /api/companion/prepare -> 400 日期必须是有效的 YYYY-MM-DD
+[提示] POST /api/companion/prepare -> 400 日期必须是有效的 YYYY-MM-DD
+[提示] POST /api/companion/prepare -> 400 日期必须是有效的 YYYY-MM-DD
+[提示] POST /api/companion/prepare -> 400 想记录的话必须是非空文字
+[提示] POST /api/companion/prepare -> 400 想记录的话必须是非空文字
+[提示] POST /api/companion/prepare -> 400 想记录的话必须是非空文字
+[提示] POST /api/companion/prepare -> 400 想记录的话必须是非空文字
+[提示] POST /api/companion/prepare -> 400 想记录的话不能超过2000字
+PASS strict date, string types and untruncated message limits
+PASS prepare is persistent preview only with local provider
+[提示] GET /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4 -> 404 草稿不存在
+[提示] POST /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4/confirm -> 404 草稿不存在
+[提示] DELETE /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4 -> 404 草稿不存在
+[提示] GET /api/companion/drafts/not-a-uuid -> 404 草稿不存在
+PASS cross-user get, confirm and cancel all conceal draft
+[提示] POST /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4/confirm -> 400 日记内容不能超过5000字
+[提示] POST /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4/confirm -> 400 日记内容必须是非空文字
+[提示] POST /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4/confirm -> 400 日记内容必须是非空文字
+[提示] POST /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4/confirm -> 400 日记内容必须是非空文字
+PASS confirmation enforces text limit without truncation
+[提示] DELETE /api/companion/drafts/8159784a-0850-4e12-ba90-77a6f5a398e4 -> 409 草稿已经确认，不能取消
+PASS parallel repeated confirm creates a single private diary
+[提示] POST /api/companion/drafts/63c05ea8-ec3c-4cdc-858c-47f03effaff5/confirm -> 409 这一天已经有日记，请打开原日记查看；草稿不会覆盖它
+PASS same-date conflict never overwrites or publishes existing diary
+PASS idempotent success reports current visibility and survives draft expiry
+[提示] POST /api/companion/drafts/eafa2788-77d7-4cfa-ae5c-c89793afd99a/confirm -> 409 synthetic transaction interruption
+PASS failure between diary insert and draft update rolls back real database
+[提示] POST /api/companion/drafts/f43dd03d-a3eb-4b6f-95fa-b3220ba9521b/confirm -> 409 这一天已经有日记，请打开原日记查看；草稿不会覆盖它
+PASS different drafts racing for same date create only one record
+[提示] POST /api/companion/drafts/ffe8d315-728c-4719-80bc-800841e4dbfa/confirm -> 410 草稿已过期，请重新准备
+[提示] POST /api/companion/drafts/4d410b2b-2bf1-4d67-a894-f9a9a218eb54/confirm -> 409 草稿已取消
+PASS expiration and cancellation prevent execution
+PASS recent diaries require explicit true and only own bounded sources
+PASS controlled model output and untrusted source boundary
+PASS model error and overlong output fall back honestly
+PASS truncated model diary is rejected and diary has its own output budget
+PASS local replies do not promise persistence or guaranteed hotline availability
+PASS summary failure warning never echoes upstream response bodies
+PASS crisis including advertising stops before model and draft creation
+COMPANION: 18 checks passed (real MySQL, synthetic users, loopback models only).
+==============================================
+  内容检测单元测试
+==============================================
+
+──────────────────────────────────────────────
+  1. 应该拦住的：广告导流
+──────────────────────────────────────────────
+  ✅ 拦住 [广告导流] 加微信+账号
+  ✅ 拦住 [广告导流] 加V
+  ✅ 拦住 [广告导流] 微信冒号账号
+  ✅ 拦住 [广告导流] 拉群
+  ✅ 拦住 [广告导流] 导流到主页
+  ✅ 拦住 [广告导流] 导流到私聊
+  ✅ 拦住 [外链] 带链接
+  ✅ 拦住 [外链] 带网址
+
+──────────────────────────────────────────────
+  2. 应该拦住的：诈骗
+──────────────────────────────────────────────
+  ✅ 拦住 [诈骗] 刷单
+  ✅ 拦住 [诈骗] 躺赚类兼职
+  ✅ 拦住 [诈骗] 网贷
+  ✅ 拦住 [诈骗] 包过
+  ✅ 拦住 [违法] 假发票
+
+──────────────────────────────────────────────
+  3. 应该拦住的：人身攻击
+──────────────────────────────────────────────
+  ✅ 拦住 [人身攻击] 废物
+  ✅ 拦住 [人身攻击] 去死
+  ✅ 拦住 [人身攻击] 脑残
+
+──────────────────────────────────────────────
+  4. 危机信号：要识别出来，但类别必须单独标记
+──────────────────────────────────────────────
+  ✅ 拦住 [危机信号] 不想活
+  ✅ 拦住 [危机信号] 自杀
+  ✅ 拦住 [危机信号] 结束生命
+
+  --- detectCrisis 是否单独可判 ---
+  ✅ detectCrisis("我不想活了") = true  明确表达
+  ✅ detectCrisis("撑不下去了") = true  口语化表达
+  ✅ detectCrisis("今天天气不错") = false  正常内容
+  ✅ detectCrisis("加我微信 abc123") = false  广告不算危机
+
+──────────────────────────────────────────────
+  5. ★ 绝对不能误杀的：正常聊天
+──────────────────────────────────────────────
+  ✅ 放行 日常流水
+  ✅ 放行 家常
+  ✅ 放行 低落但不是危机
+  ✅ 放行 自嘲
+  ✅ 放行 正常笑声
+  ✅ 放行 语气词
+  ✅ 放行 写景
+  ✅ 放行 情绪表达
+  ✅ 放行 致谢
+  ✅ 放行 失眠倾诉
+
+  --- 容易误判的边界情况 ---
+  ✅ 放行 "笑死"是正常网络用语
+  ✅ 放行 "睡死"是比喻
+  ✅ 放行 "累死"是累的夸张说法
+  ✅ 放行 "加班"不是加微信
+  ✅ 放行 "加"是普通动词
+  ✅ 放行 无关
+  ✅ 放行 提到微信但没有账号，不算导流
+  ✅ 放行 "网上"不是链接
+
+──────────────────────────────────────────────
+  6. 刷屏检测
+──────────────────────────────────────────────
+  ✅ 同一个字母重复20次（超阈值）
+  ✅ 同一个字母重复16次（刚超阈值）
+  ✅ 同一个字母重复30次
+  ✅ "啊"是语气词，重复20次也放行
+  ✅ "啊"重复50次也放行
+  ✅ 两字单元重复（我第一版漏了这种情况）
+  ✅ 三字单元重复
+  ✅ 同一个字母17次：超过单字阈值 → 拦
+  ✅ 同一个字母16次：刚超过单字阈值 → 拦
+  ✅ 同一个字母15次：正好在阈值内 → 放行
+  ✅ 同一个字母10次：没超阈值 → 放行
+  ✅ 同一个字母8次：没超阈值 → 放行
+  ✅ "好"重复20次：超过单字阈值15 → 拦
+  ✅ abab 只有4个字，太短，不算刷屏
+  ✅ "哈"是笑声，重复不算刷屏
+  ✅ "嗯"是语气词，重复不算刷屏
+  ✅ "啊"是语气词，重复不算刷屏
+  ✅ 正常应声
+  ✅ 正常内容
+  ✅ 只说两个字不算刷屏
+
+──────────────────────────────────────────────
+  7. 边界输入不能崩
+──────────────────────────────────────────────
+  ✅ 空字符串
+  ✅ 纯空格
+  ✅ null
+  ✅ undefined
+  ✅ 数字
+  ✅ 对象
+  ✅ 5000 个不同字符（超长但不是刷屏，实际 2000 种字符）
+
+──────────────────────────────────────────────
+  8. 提示语必须是可读的中文（不能只返回 true/false）
+──────────────────────────────────────────────
+  ✅ 不同违规类别给出不同提示语（共 4 种）
+      「这里不能留联系方式哦」
+      「善语结善缘，换种说法好吗」
+      「这类信息可能是骗局，已经拦下了」
+      「这里不能发链接哦」
+  ✅ 提示语都是温和的说法，没有"违规/封号"这类字眼
+
+──────────────────────────────────────────────
+  9. 打码函数（日志里不能明文记录敏感内容）
+──────────────────────────────────────────────
+  原文: 加我微信abc12345，刷单日入过百
+  打码: ****abc12345，******
+  ✅ 敏感部分已打码
+
+==============================================
+  结果： 通过 71   失败 0
+==============================================
+
+  🎉 内容检测全部通过（误杀和漏放都验过了）
+
+==============================================
+  违规检测机器人 · 单元测试
+==============================================
+
+──────────────────────────────────────────────
+  1. 正常消息应该全部放行
+──────────────────────────────────────────────
+  ✅ 放行「今天天气不错」
+  ✅ 放行「我妈寄的腊肠到了」
+  ✅ 放行「哈哈哈哈太搞笑了」
+  ✅ 放行「嗯嗯，我知道了」
+  ✅ 放行「有点想家了」
+  ✅ 放行「谢谢你，陌生人」
+  ✅ 放行「笑死我了」
+  ✅ 放行「今天加班到很晚」
+  ✅ 放行「aaa电池买了两节」
+
+──────────────────────────────────────────────
+  2. 违规内容应该被拦下
+──────────────────────────────────────────────
+  ✅ 拦住 [广告导流]「加我微信 abc12345」
+  ✅ 拦住 [广告导流]「想聊天的进群」
+  ✅ 拦住 [诈骗]「刷单日入过百」
+  ✅ 拦住 [人身攻击]「你这个废物」
+  ✅ 拦住 [外链]「www.ad.com」
+  ✅ 拦住 [刷屏]「aaaaaaaaaaaaaaaaaaaa」
+
+──────────────────────────────────────────────
+  3. ★ 分级处理：提醒 → 30秒 → 5分钟
+──────────────────────────────────────────────
+  ✅ 第 1 次违规被记下
+  ✅ ★ 第 1 次不禁言（只提醒）
+  ✅ 内容被拦下
+  ✅ 有机器人提示语
+     @小明 这句话不太合适，我先不发了。这里不能留联系方式哦
+  ✅ 第 2 次违规
+  ✅ ★ 第 2 次禁言 30 秒
+     @小明 又出现不合适的内容，先安静 30 秒吧。
+  ✅ 第 3 次违规
+  ✅ ★ 第 3 次禁言 5 分钟（300 秒）
+     @小明 多次出现不合适的内容，先安静 5 分钟。这里想留个能好好说话的地方。
+  ✅ 第 4 次违规也被记下
+  ✅ ★ 第 4 次仍是 5 分钟（不无限加码）
+  ✅ 上限设为 5 分钟是有意的：再往上就成了"报复"，不是管理
+
+──────────────────────────────────────────────
+  4. ★ 危机信号：永远不处罚
+──────────────────────────────────────────────
+  ✅ 放行且不计违规「我不想活了」
+  ✅ 放行且不计违规「想着自杀」
+  ✅ 放行且不计违规「想结束生命」
+  ✅ 放行且不计违规「真的撑不下去了」
+  ✅ 放行且不计违规「熬不住了」
+  ✅ 放行且不计违规「想消失」
+  ✅ 放行且不计违规「活着没意思」
+  ✅ ★ 连说 5 次危机信号后，违规计数仍然是 0
+  ✅ 之后正常发言不受影响
+  ✅ 如果求救被当成违规，这个人就再也不会开口了
+  ✅ ★ 危机信号不能洗白违规（之后发广告照样算第 1 次）
+
+──────────────────────────────────────────────
+  5. 违规计数按【房间】隔离
+──────────────────────────────────────────────
+  ✅ 房间 1 里已经第 3 次
+  ✅ ★ 换个房间计数从 1 开始（不跨房间累计）
+  ✅ 所以在新房间只是被提醒，不会被秒禁言
+  ✅ 否则一个人在 A 群犯错，到 B 群直接被禁言，太冤
+
+──────────────────────────────────────────────
+  6. 违规计数按【人】隔离
+──────────────────────────────────────────────
+  ✅ ★ 换个人计数从 1 开始
+
+──────────────────────────────────────────────
+  7. 禁言状态判断（不依赖 JS 时区解析）
+──────────────────────────────────────────────
+  ✅ 剩余 0 秒 → 没被禁言
+  ✅ 剩余 60 秒 → 被禁言
+  ✅ 剩余秒数原样返回
+  ✅ 300 秒也对
+  ✅ null → 没被禁言
+  ✅ undefined → 没被禁言
+
+  --- 兜底路径（传时间字符串，有隐患但兼容老代码）---
+  ✅ 过去的时间 → 已过期
+  ✅ 未来的时间 → 仍在禁言
+  ✅ 非法字符串 → 当作没禁言（不崩）
+
+  ✅ ★ 生产代码优先用 TIMESTAMPDIFF 让 MySQL 算剩余秒数，绕开 JS 时区解析
+     （我踩过：测试里用 toISOString() 造 UTC 字符串，和本地时间差 8 小时）
+
+──────────────────────────────────────────────
+  8. 边界输入不能崩
+──────────────────────────────────────────────
+  ✅ 空字符串 → 正常返回（allow=true）
+  ✅ 纯空格 → 正常返回（allow=true）
+  ✅ null → 正常返回（allow=true）
+  ✅ undefined → 正常返回（allow=true）
+  ✅ 数字 → 正常返回（allow=true）
+  ✅ 对象 → 正常返回（allow=true）
+  ✅ 超长内容 → 正常返回（allow=false）
+  ✅ 不传 room 参数也能工作（nick 缺省用"这位朋友"）
+     @这位朋友 又出现不合适的内容，先安静 30 秒吧。
+
+──────────────────────────────────────────────
+  9. 提示语的质量（这个产品里，措辞比规则更重要）
+──────────────────────────────────────────────
+  ✅ ★ 提示语没有"违规/封号/禁止"这类字眼
+  ✅ 提示语点名了对方：@小明 这句话不太合适，我先不发了。这里不能留联系方式哦...
+  ✅ 提示语点名了对方：@小明 又出现不合适的内容，先安静 30 秒吧。...
+  ✅ 提示语点名了对方：@小明 多次出现不合适的内容，先安静 5 分钟。这里想留个能...
+  ✅ ★ 三档的提示语各不相同（不是复制粘贴同一句）
+     第1档：@小明 这句话不太合适，我先不发了。这里不能留联系方式哦
+     第2档：@小明 又出现不合适的内容，先安静 30 秒吧。
+     第3档：@小明 多次出现不合适的内容，先安静 5 分钟。这里想留个能好好说话的地方。
+  ✅ ★ 最重那档解释了理由，而不是单纯威胁
+
+==============================================
+  结果： 通过 66   失败 0
+==============================================
+
+  🎉 违规检测机器人全部通过（分级尺度 + 危机信号保护都验过了）
+
+
+EXIT_CODE=0

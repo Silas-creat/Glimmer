@@ -1,0 +1,20 @@
+[
+  {
+    "ProcessId": 39896,
+    "ParentProcessId": 43188,
+    "CreationDate": "2026-11-15T19:47:02.154737+08:00",
+    "CommandLine": "D:/mysql/bin/mysqld.exe --no-defaults --basedir=D:/mysql --datadir=./mysql-data --port=3307 --bind-address=127.0.0.1 --mysqlx=OFF --console"
+  },
+  {
+    "ProcessId": 47736,
+    "ParentProcessId": 13112,
+    "CreationDate": "2026-11-15T19:47:03.684573+08:00",
+    "CommandLine": "D:\\Node.js\\node.exe src/app.js"
+  },
+  {
+    "ProcessId": 35644,
+    "ParentProcessId": 13112,
+    "CreationDate": "2026-11-15T19:47:04.243088+08:00",
+    "CommandLine": "D:\\Node.js\\node.exe setup/start.js --no-open --port 8081"
+  }
+]

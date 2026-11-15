@@ -1,0 +1,33 @@
+# 2026-11-15 部署复现 · 现有 3307 零写入后快照（T39）
+
+> 生成时间：2026-11-15T14:05:24.818Z
+> 说明：仅只读核对；未连接 3307、未读取凭证、未执行任何写操作。
+
+## 现有 .env 哈希
+
+```text
+before=241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a
+after =241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a
+MATCH=true
+```
+
+## D:/mysql/data 目录指纹
+
+```text
+before: files=187 bytes=212184299
+after : files=187 bytes=212184299 exists=true
+MATCH=true
+```
+
+## 现有进程快照
+
+```json
+[{"ProcessId":39896,"Name":"mysqld.exe","CreationDate":"\/Date(1794743222154)\/","CommandLine":"D:/mysql/bin/mysqld.exe --no-defaults --basedir=D:/mysql --datadir=./mysql-data --port=3307 --bind-address=127.0.0.1 --mysqlx=OFF --console"},{"ProcessId":47736,"Name":"node.exe","CreationDate":"\/Date(1794743223684)\/","CommandLine":"D:\\Node.js\\node.exe src/app.js"},{"ProcessId":35644,"Name":"node.exe","CreationDate":"\/Date(1794743224243)\/","CommandLine":"D:\\Node.js\\node.exe setup/start.js --no-open --port 8081"}]
+```
+
+## 结论
+
+- .env 哈希一致：true
+- 数据目录文件数/字节一致：true
+- 现有 3000/8081/3307 进程仍为原 PID（39896/47736/35644）时，方可判定未重启；若 PID 变化需人工复核。
+- 在无凭证条件下未读取 @@datadir / 库清单，因此“库表内容零写入”只作为未验证项，不作通过声明。

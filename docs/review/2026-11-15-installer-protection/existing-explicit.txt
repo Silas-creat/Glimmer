@@ -1,0 +1,7 @@
+已验证配置中的实例；不会修改账号认证或重写 .env
+执行 scripts/init-db.js
+scripts/init-db.js 完成
+执行 scripts/migrate.js
+scripts/migrate.js 完成
+
+EXIT_CODE=0

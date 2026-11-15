@@ -1,0 +1,73 @@
+# 2026-11-15 部署复现 · 前置基线快照（T01–T08）
+
+> 生成时间：2026-11-15T13:04:20.838Z
+> 工作区：`D:\微光同行\Glimmer`；隔离目录：`D:\微光同行\_deploy_repro`
+
+## Git 基线
+
+```text
+HEAD=2112271db26b34a557719afc60a77b91557ee624
+status:
+?? .codeartsdoer/specs/deploy_repro_hardening/
+?? tmp-preflight.cjs
+```
+
+## 关键文件哈希（实施前）
+
+```text
+31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270  前端参考/chat-companion.js
+b08a6cfa336e021369f28b000a2e5ce288d3a45e2d14fe7f2ab3edb41ee371b7  后端源码/scripts/test-chat-companion-repair.test.js
+241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a  后端源码/.env（仅哈希，未读取内容）
+7e0e9eb1450ee71d00fddf8c6d3b3dd0a2573e07e66111eeb87f58bcec2cea04  后端源码/package.json
+d9e8ee7109285478f3b08c8d36654c892442b3b96a53101152e9a42b80ce2bdb  后端源码/scripts/smoke-test.js
+97c2c509fcba7d9c8317783818bdc3cfba2b0bd70f40bf9d677ef5437d1bd743  setup/start.js
+1fa95350f1cbfb4a0e429b9d2ee641447ba54ef78f0a167f219463bdebe32535  setup/install.js
+417fd409cc633566a3e8ecc2461022412a4e157241573bb936bc0984bd465e69  后端源码/scripts/check-frontend.js
+2aaad14a4cc79bfbe879c4c810d070400316dfacdfa01301c7b4eb407fd99707  后端源码/scripts/check-pages-runtime.js
+```
+
+## 隔离副本
+
+```text
+31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270  checkout-2112271 主文件（应与固定提交一致）
+31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270  checkout-fixed 主文件
+31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270  checker-probe 主文件
+checkout-2112271 含 .env: false
+checkout-2112271 含 node_modules: false
+checkout-2112271 含 .git: false
+```
+
+## 现有服务快照（本会话 netstat 实测）
+
+```text
+3000  LISTENING  PID 47736  node.exe src/app.js
+8081  LISTENING  PID 35644  node.exe setup/start.js --no-open --port 8081
+3307  LISTENING  PID 39896  mysqld.exe --datadir=./mysql-data --port=3307
+3311 / 8090 未监听
+```
+
+## 进程启动信息（PowerShell Win32_Process）
+
+```json
+[{"ProcessId":39896,"Name":"mysqld.exe","CreationDate":"\/Date(1794743222154)\/","CommandLine":"D:/mysql/bin/mysqld.exe --no-defaults --basedir=D:/mysql --datadir=./mysql-data --port=3307 --bind-address=127.0.0.1 --mysqlx=OFF --console"},{"ProcessId":47736,"Name":"node.exe","CreationDate":"\/Date(1794743223684)\/","CommandLine":"D:\\Node.js\\node.exe src/app.js"},{"ProcessId":35644,"Name":"node.exe","CreationDate":"\/Date(1794743224243)\/","CommandLine":"D:\\Node.js\\node.exe setup/start.js --no-open --port 8081"}]
+```
+
+## 数据目录指纹（不读取内容）
+
+```text
+D:/mysql/data exists=true files=187 bytes=212184299
+D:/mysql/mysql-data exists=false files=0 bytes=0
+D:/微光同行/mysql-data exists=false files=0 bytes=0
+D:/微光同行/Glimmer/mysql-data exists=false files=0 bytes=0
+说明：3307 命令行 datadir 为相对路径 ./mysql-data，实际归属受启动 cwd 影响；
+在无凭证条件下不读取 @@datadir，本报告不据此单独宣称“零写入通过”。
+```
+
+## 日志与安全规范
+
+```text
+日志主文件：docs/codearts_proof/logs/2026-11-15-deploy-*.log
+交付副本：同名 .txt（.gitignore 的 **/*.log 不纳入 Git，txt 随报告交付）
+脱敏：不读取/打印 .env 值、Authorization、JWT、真实手机号；只记录键名与哈希。
+禁止：连接 3307 执行写操作、DROP/TRUNCATE、改现有 .env、改端口、配置真实模型。
+```

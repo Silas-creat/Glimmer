@@ -1,0 +1,174 @@
+COMMAND=npm test
+CWD=D:/微光同行/_deploy_repro/checkout-fixed/后端源码
+STARTED_AT=2026-11-15T13:38:56.374Z
+
+
+> peizhe-server@0.1.0 test
+> node scripts/smoke-test.js
+
+
+==============================================
+  部署前自检
+==============================================
+
+[1] 必需文件是否齐全
+  ✅ package.json
+  ✅ .env.example
+  ✅ .gitignore
+  ✅ README.md
+  ✅ sql/schema.sql
+  ✅ sql/seed.sql
+  ✅ scripts/deploy.sh
+  ✅ scripts/init-db.js
+  ✅ scripts/smoke-test.js
+  ✅ scripts/test-all.sh
+  ✅ scripts/check-tests.js
+  ✅ scripts/fix-test-account.js
+  ✅ scripts/test-zodiac.js
+  ✅ scripts/test-moderation.js
+  ✅ scripts/test-chatbot.js
+  ✅ scripts/test-login.js
+  ✅ scripts/test-diary.js
+  ✅ scripts/test-interact.js
+  ✅ scripts/test-profile.js
+  ✅ scripts/test-comment.js
+  ✅ scripts/test-bless.js
+  ✅ scripts/test-bottle.js
+  ✅ scripts/test-group.js
+  ✅ scripts/test-message.js
+  ✅ scripts/test-discover.js
+  ✅ scripts/test-ai.js
+  ✅ scripts/test-ai-memory.js
+  ✅ scripts/test-deepseek.js
+  ✅ scripts/migrate.js
+  ✅ scripts/seed-demo.js
+  ✅ scripts/test-api-client.js
+  ✅ scripts/test-api-interact.js
+  ✅ scripts/test-api-profile.js
+  ✅ scripts/test-api-comment.js
+  ✅ scripts/test-api-bless.js
+  ✅ scripts/test-api-bottle.js
+  ✅ scripts/test-api-message.js
+  ✅ scripts/test-api-ai.js
+  ✅ scripts/check-frontend.js
+  ✅ src/app.js
+  ✅ src/config/index.js
+  ✅ src/db/index.js
+  ✅ src/middleware/auth.js
+  ✅ src/middleware/error.js
+  ✅ src/middleware/logger.js
+  ✅ src/middleware/upload.js
+  ✅ src/routes/auth.js
+  ✅ src/routes/diary.js
+  ✅ src/routes/interact.js
+  ✅ src/routes/user.js
+  ✅ src/routes/comment.js
+  ✅ src/routes/bless.js
+  ✅ src/routes/bottle.js
+  ✅ src/routes/group.js
+  ✅ src/routes/message.js
+  ✅ src/routes/discover.js
+  ✅ src/routes/ai.js
+  ✅ src/utils/response.js
+  ✅ src/utils/validate.js
+  ✅ src/utils/jwt.js
+  ✅ src/utils/sql.js
+  ✅ src/utils/diaryHelper.js
+  ✅ src/utils/userHelper.js
+  ✅ src/utils/zodiac.js
+  ✅ src/utils/profileHelper.js
+  ✅ src/utils/moderation.js
+  ✅ src/utils/chatBot.js
+  ✅ src/utils/llm.js
+
+  --- 前端文件（缺失只警告）---
+  ✅ 前端 api.js
+  ✅ 前端 data.js
+  ✅ 前端 login.html
+  ✅ 前端 index.html
+  ✅ 前端 diary-write.html
+
+[2] package.json 内容
+  ✅ 是合法 JSON
+  ✅ 是 ESM 模块（type: module）
+  ✅ 依赖齐全
+  ✅ 有 start 脚本
+
+[3] SQL 表结构
+  ✅ 共解析到 23 张表
+  ✅ CREATE 语句括号配对
+  ✅ 所有表都是 utf8mb4
+  ✅ ENGINE 都是 InnoDB
+  ✅ 每张表都有主键
+  ✅ 外键引用的表都存在
+  ✅ 建表顺序满足外键依赖
+  ✅ 唯一索引没有重复命名冲突
+
+[4] seed.sql 初始数据
+  ✅ 4 个群聊房间都在
+  ✅ 可重复执行（带 ON DUPLICATE KEY）
+  ✅ 房间名和前端一致
+
+[5] SQL 切分逻辑（用 src/utils/sql.js 里的真实实现）
+  ✅ 切分器能处理字符串里的分号
+  ✅ 切分器能处理 -- 和 /* */ 注释
+  ✅ 切分器能处理反引号标识符
+  ✅ 切分器能处理没有结尾分号的最后一条语句
+  ✅ 切分器能处理单词里的 # （不能误判成注释）
+  ✅ schema.sql 切分后全是 CREATE TABLE
+  ✅ parseTableNames 解析出的表名和正则一致
+  ✅ seed.sql 切分后是 2 条 INSERT
+  ✅ 切分出的语句里没有多余的 SET NAMES
+
+[6] 安全红线
+  ✅ 没有硬编码数据库密码
+  ✅ 没有硬编码 API Key
+  ✅ JWT 密钥从环境变量读
+  ✅ ★ 前端目录里没有明文 API Key（这条最重要）
+  ✅ 前端没有直接请求第三方大模型接口
+  ✅ 密码/密钥没有被打进日志
+
+[7] 和前端的一致性
+  ✅ 前端目录还在（顺手确认路径没写错）
+  ✅ 手机号校验规则和前端一致（1开头11位）
+  ✅ 日期格式和前端一致（YYYY-MM-DD）
+
+[8] 部署脚本
+  ✅ deploy.sh 首行是 bash
+  ✅ deploy.sh 兼容 apt 和 yum
+  ✅ deploy.sh 用 debconf 预置 MySQL 密码（否则安装会卡住）
+  ✅ deploy.sh 修了 MySQL auth_socket 问题
+  ✅ deploy.sh 没有用 heredoc 给 sudo tee 传内容（会抢 stdin）
+  ✅ deploy.sh 写入 service 文件后有校验
+
+  --- 所有 shell 脚本换行符（CRLF 会让 Linux 报 bad interpreter）---
+  ✅ scripts/deploy.sh
+  ✅ scripts/test-all.sh
+  ✅ scripts/test-step1-2.sh
+  ✅ scripts/verify-all.sh
+
+[9] 路由是否都挂到了 app.js
+  ✅ src/routes 下有 14 个路由文件
+  ✅ 路由 ai 已在 app.js 里挂载
+  ✅ 路由 auth 已在 app.js 里挂载
+  ✅ 路由 bless 已在 app.js 里挂载
+  ✅ 路由 bottle 已在 app.js 里挂载
+  ✅ 路由 comment 已在 app.js 里挂载
+  ✅ 路由 companion 已在 app.js 里挂载
+  ✅ 路由 compat 已在 app.js 里挂载
+  ✅ 路由 diary 已在 app.js 里挂载
+  ✅ 路由 discover 已在 app.js 里挂载
+  ✅ 路由 group 已在 app.js 里挂载
+  ✅ 路由 interact 已在 app.js 里挂载
+  ✅ 路由 logs 已在 app.js 里挂载
+  ✅ 路由 message 已在 app.js 里挂载
+  ✅ 路由 user 已在 app.js 里挂载
+
+==============================================
+  通过 131   警告 0   失败 0
+==============================================
+
+🎉 全部检查通过，可以开始部署了。
+
+
+EXIT_CODE=0

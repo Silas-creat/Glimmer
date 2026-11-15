@@ -1,0 +1,84 @@
+{
+  "launcherPid": 42596,
+  "health": {
+    "proxy": {
+      "service": "陪着后端",
+      "version": "0.1.0",
+      "env": "development",
+      "time": "2026/11/15 22:54:48",
+      "uptime": "0s",
+      "db": {
+        "connected": true,
+        "version": "8.4.13"
+      },
+      "ai": {
+        "configured": false,
+        "model": "deepseek-chat"
+      }
+    },
+    "direct": {
+      "service": "陪着后端",
+      "version": "0.1.0",
+      "env": "development",
+      "time": "2026/11/15 22:54:48",
+      "uptime": "0s",
+      "db": {
+        "connected": true,
+        "version": "8.4.13"
+      },
+      "ai": {
+        "configured": false,
+        "model": "deepseek-chat"
+      }
+    },
+    "frontendHash": "31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270"
+  },
+  "initdb-first": {
+    "exit": 0
+  },
+  "initdb-second": {
+    "exit": 0
+  },
+  "smoke": {
+    "exit": 0
+  },
+  "frontend": {
+    "exit": 0
+  },
+  "engineering-tests": {
+    "exit": 0
+  },
+  "competition": {
+    "exit": 0
+  },
+  "merge24": {
+    "exit": 0
+  },
+  "independent": {
+    "exit": 0
+  },
+  "sourceHashes": {
+    "companion": "31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270",
+    "repairTest": "b08a6cfa336e021369f28b000a2e5ce288d3a45e2d14fe7f2ab3edb41ee371b7",
+    "originalEnv": "241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a"
+  },
+  "cleanupPending": false,
+  "launcherRunning": false,
+  "cleanup": {
+    "ports": [
+      {
+        "port": 3002,
+        "open": false
+      },
+      {
+        "port": 8092,
+        "open": false
+      },
+      {
+        "port": 3312,
+        "open": false
+      }
+    ],
+    "originalEnvSha256": "241f5def1658bab9e11bacbfe64f68416cf2e96143611abd431a70f0258ece9a"
+  }
+}

@@ -1,0 +1,98 @@
+# 2026-11-15 部署复现 · 修改面与脱敏核对（T40–T41）
+
+## 隔离副本改动（固定提交 → checkout-fixed）
+
+| 文件 | 固定提交 | checkout-fixed | 结论 |
+|---|---|---|---|
+| `后端源码/scripts/smoke-test.js` | f7ac5f543743c62080798134e01705c21cb22c342eb535c3113f4a09c5ace1f5 | edb4e7d9cc2795369c68ff1e6f295ba03aa48837d5a2bf1ca8a3d5350805bfd7 | 已修改 |
+| `setup/start.js` | 97c2c509fcba7d9c8317783818bdc3cfba2b0bd70f40bf9d677ef5437d1bd743 | 7e0810d703e45cdb863d3d9003fb0f2b7fafdb7329c02ec71f982e8dbd98b179 | 已修改 |
+| `后端源码/scripts/check-frontend.js` | 30d1b850bef825c98636fa10fec1568bea634734cbc16c5c0a71832836ca26ee | 3a66fc486bc715daadbf42f93bf827f50ba34b8e6b7272068616627c41a0f4a2 | 已修改 |
+| `后端源码/scripts/check-pages-runtime.js` | 251c481e83a10999092323018ad40123f7dedfc21eedea8e0b339086e44577bc | e7162cf3b7c69c04a631a5fe23a47c33dab97a655db9beae740f5410bfc9d314 | 已修改 |
+| `后端源码/scripts/deploy.sh` | 88dc654440254a8637aa9dea64ab19ed82c3569ec948da34b607dd0012655287 | 15f4863daac7776baea838a4f98b507f4f5e55d83f7f8b534bca7916f587bf1d | 已修改 |
+| `后端源码/scripts/test-all.sh` | 48409ad7695ed4f9a6730960fb4c1f3d00beb88047c29c2af3f778be0099802c | 3a418f8ade89f5bd0a88a964c478b04d82e93cb4f35f4af7ff532a33c6c80853 | 已修改 |
+| `后端源码/scripts/test-step1-2.sh` | 2bba9f2fd5ea2dfae00f77ddf61405aa71e48550d47027163d0b04f90c2c040f | cf2fd7e6cb2b5343ce6a99138f78f0282cc3a219d6b2b62eeb1fc2c6486a428f | 已修改 |
+| `后端源码/scripts/verify-all.sh` | cc5a3e5a8f1779cb3c7bbab79139ccedbfe21e43e5a35a3013014a528348d05f | e4483a6eb79756e89b4a3fe16f4b8280a259945b0529ef6beddd363a5c66238c | 已修改 |
+
+## 主仓库状态（未修改固定版本业务代码）
+
+```text
+?? .codeartsdoer/specs/deploy_repro_hardening/
+?? .deploy_probe/
+?? .deploy_repro/
+?? docs/codearts_proof/logs/2026-11-15-deploy-check-frontend.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-health.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-initdb-first.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-initdb-second.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-mysql-3311-alt-status.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-mysql-3311-daemon-status.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-mysql-3311-status.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-mysql-init-alt.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-mysql-init.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-npm-ci-en.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-npm-ci-probe.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-npm-ci-repo.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-npm-ci.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-npm-test-after.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-npm-test-before.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-postflight.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-preflight.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-probe.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-regression-competition.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-regression-independent.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-regression-merge24.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-regression-single.txt
+?? docs/codearts_proof/logs/2026-11-15-deploy-runtime.txt
+?? tmp-check-crlf.cjs
+?? tmp-check-frontend.cjs
+?? tmp-e2e.cjs
+?? tmp-env-initdb.cjs
+?? tmp-fix-lf-probe.cjs
+?? tmp-fix-lf-probe2.cjs
+?? tmp-fix-lf.cjs
+?? tmp-mysql-daemon.cjs
+?? tmp-mysql-fg2.cjs
+?? tmp-mysql-fg3.cjs
+?? tmp-mysql-foreground.cjs
+?? tmp-mysql-init-alt.cjs
+?? tmp-mysql-init.cjs
+?? tmp-mysql-passwd.cjs
+?? tmp-mysql-start.cjs
+?? tmp-npm-ci-en.cjs
+?? tmp-npm-ci-probe.cjs
+?? tmp-npm-ci-repo.cjs
+?? tmp-npm-ci.cjs
+?? tmp-npmtest-after.cjs
+?? tmp-npmtest-before.cjs
+?? tmp-postflight.cjs
+?? tmp-preflight.cjs
+?? tmp-probe-port.cjs
+?? tmp-probe.cjs
+?? tmp-surface-deploy.cjs
+```
+
+主仓库关键文件哈希：
+
+```text
+31c567e972b963bbce63877728958dbd755890a1afba7456f924e781b3a22270  前端参考/chat-companion.js
+b08a6cfa336e021369f28b000a2e5ce288d3a45e2d14fe7f2ab3edb41ee371b7  后端源码/scripts/test-chat-companion-repair.test.js
+d9e8ee7109285478f3b08c8d36654c892442b3b96a53101152e9a42b80ce2bdb  后端源码/scripts/smoke-test.js
+97c2c509fcba7d9c8317783818bdc3cfba2b0bd70f40bf9d677ef5437d1bd743  setup/start.js
+417fd409cc633566a3e8ecc2461022412a4e157241573bb936bc0984bd465e69  后端源码/scripts/check-frontend.js
+2aaad14a4cc79bfbe879c4c810d070400316dfacdfa01301c7b4eb407fd99707  后端源码/scripts/check-pages-runtime.js
+7e0e9eb1450ee71d00fddf8c6d3b3dd0a2573e07e66111eeb87f58bcec2cea04  后端源码/package.json
+15f4863daac7776baea838a4f98b507f4f5e55d83f7f8b534bca7916f587bf1d  后端源码/scripts/deploy.sh
+```
+
+预期：`chat-companion.js`=`31c567e9…`、测试=`b08a6cfa…`、`package.json`=`7e0e9eb1…`；P0/P1 脚本与 `.sh` 在隔离副本修改，主仓库保持固定版本。
+
+## 脱敏检索（本轮部署日志）
+
+```text
+命中数：0
+```
+
+## 结论
+
+1. 修复只发生在隔离副本；主仓库固定版本业务代码与 P0/P1 脚本未改。
+2. 4 个 `.sh` 在固定提交导出物中为 CRLF，工作区为 LF；隔离副本已转为 LF 并通过检查。
+3. 日志检索未命中真实凭证；若命中仅为模板键名或测试合成值，需人工确认后保留说明。

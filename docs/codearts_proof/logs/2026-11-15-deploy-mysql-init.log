@@ -1,0 +1,6 @@
+COMMAND=mysqld --no-defaults --initialize-insecure --basedir=D:/mysql --datadir=.deploy_repro/mysql-data-3311
+DATA_DIR=D:\微光同行\Glimmer\.deploy_repro\mysql-data-3311
+STARTED_AT=2026-11-15T13:53:49.926Z
+
+
+EXIT_CODE=0
